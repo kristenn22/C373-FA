@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LegiLah - Order Details</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: white;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .account-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        /* Timeline Styles */
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+
+        .timeline-container {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .timeline-line {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #e5e7eb;
+            z-index: 1;
+        }
+
+        .timeline-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: #2563eb;
+            transition: width 0.5s ease;
+            z-index: 2;
+        }
+
+        .timeline-step {
+            position: relative;
+            flex: 1;
+            text-align: center;
+            z-index: 3;
+        }
+
+        .timeline-dot {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            border: 4px solid white;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #999;
+            transition: all 0.3s;
+        }
+
+        .timeline-step.completed .timeline-dot {
+            background: #2563eb;
+            color: white;
+        }
+
+        .timeline-step.active .timeline-dot {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+        }
+
+        .timeline-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .timeline-step.completed .timeline-label,
+        .timeline-step.active .timeline-label {
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        /* Order Details Section */
+        .details-section {
+            background: #f9f9f9;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .details-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .details-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .order-id {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .details-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .details-item:last-child {
+            border-bottom: none;
+        }
+
+        .details-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .details-value {
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .tracking-history {
+            margin-top: 30px;
+        }
+
+        .tracking-history h3 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .tracking-item {
+            padding: 15px;
+            background: white;
+            border-left: 3px solid #2563eb;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .tracking-status {
+            font-weight: 600;
+            color: #2563eb;
+            margin-bottom: 5px;
+        }
+
+        .tracking-description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .tracking-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .button-primary {
+            background: #000;
+            color: white;
+        }
+
+        .button-primary:hover {
+            background: #333;
+        }
+
+        .button-secondary {
+            background: #e5e7eb;
+            color: #333;
+        }
+
+        .button-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">LegiLah</div>
+        <div>
+            <% if (acct) { %>
+                <span class="account-info">Connected: <%= acct.substring(0, 6) %>...<%=acct.substring(38) %></span>
+            <% } %>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Order Details</h1>
+
+        <% if (loading) { %>
+            <div class="loading">
+                <p>Loading order details...</p>
+            </div>
+        <% } else { %>
+            <!-- Timeline -->
+            <div class="timeline">
+                <div class="timeline-container">
+                    <div class="timeline-line">
+                        <div class="timeline-progress" id="timelineProgress"></div>
+                    </div>
+                    
+                    <div class="timeline-step completed" data-step="1">
+                        <div class="timeline-dot">✓</div>
+                        <div class="timeline-label">Order<br>Placed</div>
+                    </div>
+                    
+                    <div class="timeline-step" data-step="2" id="step2">
+                        <div class="timeline-dot">2</div>
+                        <div class="timeline-label">Order<br>Processing</div>
+                    </div>
+                    
+                    <div class="timeline-step" data-step="3" id="step3">
+                        <div class="timeline-dot">3</div>
+                        <div class="timeline-label">Shipment<br>Process</div>
+                    </div>
+                    
+                    <div class="timeline-step" data-step="4" id="step4">
+                        <div class="timeline-dot">4</div>
+                        <div class="timeline-label">Package<br>Delivered</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Details -->
+            <div class="details-section">
+                <div class="details-header">
+                    <div class="details-title">Order Information</div>
+                    <div class="order-id">Order #<span id="orderId"><%= orderId %></span></div>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Product:</span>
+                    <span class="details-value" id="productName"><%= product.name %></span>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Amount:</span>
+                    <span class="details-value" id="orderAmount">$<%= product.price %></span>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Status:</span>
+                    <span class="details-value" id="orderStatus">Processing</span>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Order Date:</span>
+                    <span class="details-value" id="orderDate">-</span>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Payment Status:</span>
+                    <span class="details-value" id="paymentStatus">Paid</span>
+                </div>
+            </div>
+
+            <!-- Tracking History -->
+            <div class="tracking-history">
+                <h3>Tracking History</h3>
+                <div id="trackingList">
+                    <!-- Tracking items will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="button button-secondary" onclick="goBack()">
+                    Return
+                </button>
+                <button class="button button-primary" onclick="nextPage()">
+                    Next
+                </button>
+            </div>
+        <% } %>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let contract;
+        let userAccount;
+        const orderId = <%= orderId %>;
+        const contractABI = <%- contractABI %>;
+        const contractData = <%- contractData %>;
+
+        const statusMap = {
+            '0': 'Pending',
+            '1': 'Processing',
+            '2': 'Shipped',
+            '3': 'Delivered',
+            '4': 'Confirmed'
+        };
+
+        async function initWeb3() {
+            if (typeof window.ethereum !== 'undefined') {
+                web3 = new Web3(window.ethereum);
+                const accounts = await web3.eth.getAccounts();
+                userAccount = accounts[0];
+                const networkId = await web3.eth.net.getId();
+                const deployedNetwork = contractData.networks[networkId];
+                
+                if (deployedNetwork) {
+                    contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
+                    await loadOrderDetails();
+                }
+            }
+        }
+
+        async function loadOrderDetails() {
+            try {
+                const order = await contract.methods.getOrder(orderId).call();
+                const tracking = await contract.methods.getTrackingHistory(orderId).call();
+                
+                // Update order details
+                document.getElementById('productName').textContent = order.productName;
+                document.getElementById('orderAmount').textContent = '$' + web3.utils.fromWei(order.totalAmount, 'ether');
+                document.getElementById('orderStatus').textContent = statusMap[order.status];
+                document.getElementById('paymentStatus').textContent = order.isPaid ? 'Paid' : 'Unpaid';
+                
+                const orderDate = new Date(Number(order.timestamp) * 1000);
+                document.getElementById('orderDate').textContent = orderDate.toLocaleDateString();
+
+                // Update timeline based on status
+                updateTimeline(Number(order.status));
+
+                // Load tracking history
+                loadTrackingHistory(tracking);
+                
+            } catch (error) {
+                console.error('Error loading order details:', error);
+            }
+        }
+
+        function updateTimeline(status) {
+            const steps = [
+                document.getElementById('step2'),
+                document.getElementById('step3'),
+                document.getElementById('step4')
+            ];
+            
+            let progress = 0;
+            
+            if (status >= 1) {
+                steps[0].classList.add('completed');
+                progress = 33;
+            }
+            if (status >= 2) {
+                steps[1].classList.add('completed');
+                progress = 66;
+            }
+            if (status >= 3) {
+                steps[2].classList.add('completed');
+                progress = 100;
+            }
+            
+            // Set active step
+            if (status < 4 && steps[status - 1]) {
+                steps[status - 1].classList.add('active');
+            }
+            
+            document.getElementById('timelineProgress').style.width = progress + '%';
+        }
+
+        function loadTrackingHistory(tracking) {
+            const trackingList = document.getElementById('trackingList');
+            trackingList.innerHTML = '';
+            
+            tracking.reverse().forEach(item => {
+                const trackingDate = new Date(Number(item.timestamp) * 1000);
+                const trackingItem = document.createElement('div');
+                trackingItem.className = 'tracking-item';
+                trackingItem.innerHTML = `
+                    <div class="tracking-status">${item.status}</div>
+                    <div class="tracking-description">${item.description}</div>
+                    <div class="tracking-time">${trackingDate.toLocaleString()}</div>
+                `;
+                trackingList.appendChild(trackingItem);
+            });
+        }
+
+        function goBack() {
+            window.location.href = '/ordertrack?orderId=' + orderId;
+        }
+
+        function nextPage() {
+            window.location.href = '/confirm?orderId=' + orderId;
+        }
+
+        window.addEventListener('load', initWeb3);
+    </script>
+</body>
+</html>

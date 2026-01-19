@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LegiLah - Buy and sell with ease</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover {
+            color: #000;
+        }
+
+        .account-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .hero-section {
+            text-align: center;
+            padding: 80px 40px 60px;
+            background: white;
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 15px;
+        }
+
+        .hero-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-primary {
+            background: #000;
+            color: white;
+            padding: 14px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.3s;
+        }
+
+        .btn-primary:hover {
+            background: #333;
+        }
+
+        .btn-secondary {
+            color: #000;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .btn-secondary:hover {
+            color: #666;
+        }
+
+        .products-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 30px;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 20px;
+        }
+
+        .product-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #000;
+            margin-bottom: 8px;
+        }
+
+        .product-description {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        .product-price {
+            font-size: 18px;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .footer-stats {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 20px 40px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .like-icon {
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.3s;
+        }
+
+        .nav-icon:hover {
+            color: #000;
+        }
+
+        .sidebar {
+            position: fixed;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px 0 0 12px;
+            box-shadow: -2px 0 8px rgba(0,0,0,0.08);
+        }
+
+        .connect-wallet {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .wallet-btn {
+            background: #2563eb;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .wallet-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .wallet-info {
+            background: #f0f9ff;
+            color: #0369a1;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 36px;
+            }
+
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="connect-wallet">
+        <% if (!loading && acct) { %>
+            <div class="wallet-info">
+                🔗 <%= acct.substring(0, 6) %>...<%=acct.substring(38) %>
+            </div>
+        <% } else { %>
+            <button class="wallet-btn" onclick="connectMetaMask()">Connect Wallet</button>
+        <% } %>
+    </div>
+
+    <div class="header">
+        <div class="logo">LegiLah</div>
+        <nav class="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="#" class="nav-link">About</a>
+            <a href="#" class="nav-link">Blockchain</a>
+            <a href="#" class="account-btn">
+                <span>👤</span>
+                <span><%= acct ? 'Account' : 'Account' %></span>
+            </a>
+        </nav>
+    </div>
+
+    <section class="hero-section">
+        <h1 class="hero-title">Buy and sell with ease</h1>
+        <p class="hero-subtitle">Why you should choose us</p>
+        <div class="cta-buttons">
+            <a href="/buy" class="btn-primary">Get Started</a>
+            <a href="#" class="btn-secondary">Sign In</a>
+        </div>
+    </section>
+
+    <section class="products-section">
+        <h2 class="section-title">Trending Now</h2>
+        <div class="products-grid">
+            <a href="/buy" class="product-card">
+                <div class="product-image">
+                    <img src="/images/onepiece.jpg" alt="One Piece The Monsters" onerror="this.parentElement.innerHTML='<div style=\'padding:40px;text-align:center;color:#999;\'>📦<br>Product Image</div>'">
+                </div>
+                <div class="product-info">
+                    <div class="product-name">One Piece The Monsters</div>
+                    <div class="product-description">Comes with official box<br>Grade A+++ without box</div>
+                    <div class="product-price">$150.00</div>
+                </div>
+            </a>
+
+            <div class="product-card">
+                <div class="product-image">
+                    <div style="padding:40px;text-align:center;color:#999;font-size:48px;">⌨️</div>
+                </div>
+                <div class="product-info">
+                    <div class="product-name">Kobotics Classic Bay</div>
+                    <div class="product-description">Mechanical keyboard<br>RGB backlight</div>
+                    <div class="product-price">$129.00</div>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-image">
+                    <div style="padding:40px;text-align:center;color:#999;font-size:48px;">👟</div>
+                </div>
+                <div class="product-info">
+                    <div class="product-name">Nike Show</div>
+                    <div class="product-description">Limited edition<br>Size 9-12 available</div>
+                    <div class="product-price">$189.00</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="footer-stats">
+        <span class="like-icon">❤️</span>
+        <span>Liked 52</span>
+    </div>
+
+    <div class="sidebar">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12h18M3 6h18M3 18h18"/>
+        </svg>
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+        </svg>
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let contract;
+        let userAccount;
+
+        async function connectMetaMask() {
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    web3 = new Web3(window.ethereum);
+                    
+                    const accounts = await web3.eth.getAccounts();
+                    userAccount = accounts[0];
+
+                    const contractData = await fetch('/build/OrderContract.json').then(r => r.json());
+                    const networkId = await web3.eth.net.getId();
+                    const deployedNetwork = contractData.networks[networkId];
+                    
+                    if (deployedNetwork) {
+                        contract = new web3.eth.Contract(contractData.abi, deployedNetwork.address);
+                        const orderCount = await contract.methods.getOrderCount().call();
+                        
+                        await fetch('/web3ConnectData', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contractAddress: deployedNetwork.address,
+                                acct: userAccount,
+                                orderCnt: orderCount
+                            })
+                        });
+
+                        window.location.reload();
+                    } else {
+                        alert('Please connect to the correct network (Ganache)');
+                    }
+                } else {
+                    alert('Please install MetaMask!');
+                    window.open('https://metamask.io/download/', '_blank');
+                }
+            } catch (error) {
+                console.error('Error connecting to MetaMask:', error);
+                alert('Failed to connect: ' + error.message);
+            }
+        }
+
+        // Auto-connect if already authorized
+        window.addEventListener('load', async () => {
+            if (typeof window.ethereum !== 'undefined' && '<%= acct %>' === '') {
+                try {
+                    const accounts = await window.ethereum.request({ 
+                        method: 'eth_accounts' 
+                    });
+                    if (accounts.length > 0) {
+                        connectMetaMask();
+                    }
+                } catch (error) {
+                    console.error('Error checking accounts:', error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
