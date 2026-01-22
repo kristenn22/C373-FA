@@ -352,9 +352,6 @@
                 <button class="button button-secondary" onclick="goBack()">
                     Return
                 </button>
-                <button class="button button-primary" onclick="nextPage()">
-                    Next
-                </button>
             </div>
         <% } %>
     </div>
@@ -377,17 +374,21 @@
         };
 
         async function initWeb3() {
-            if (typeof window.ethereum !== 'undefined') {
-                web3 = new Web3(window.ethereum);
+            try {
+                web3 = new Web3('http://127.0.0.1:7545');
                 const accounts = await web3.eth.getAccounts();
                 userAccount = accounts[0];
-                const networkId = await web3.eth.net.getId();
+                const networkId = 5777;
                 const deployedNetwork = contractData.networks[networkId];
                 
                 if (deployedNetwork) {
                     contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
                     await loadOrderDetails();
+                } else {
+                    console.error('Contract not deployed on Ganache network 5777');
                 }
+            } catch (error) {
+                console.error('Error initializing Web3:', error);
             }
         }
 
@@ -465,10 +466,6 @@
 
         function goBack() {
             window.location.href = '/ordertrack?orderId=' + orderId;
-        }
-
-        function nextPage() {
-            window.location.href = '/confirm?orderId=' + orderId;
         }
 
         window.addEventListener('load', initWeb3);

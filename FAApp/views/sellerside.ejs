@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Seller Portal - Update Shipment</title>
+	<style>
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+			background: #f6f7fb;
+			color: #111;
+			padding: 24px;
+		}
+		.shell {
+			max-width: 960px;
+			margin: 0 auto;
+			background: #fff;
+			border-radius: 12px;
+			padding: 28px;
+			box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+		}
+		h1 { margin: 0 0 12px; font-size: 26px; }
+		p.lead { margin: 0 0 20px; color: #444; }
+		.card {
+			border: 1px solid #e5e7eb;
+			border-radius: 10px;
+			padding: 16px;
+			margin-bottom: 16px;
+			background: #fafafa;
+		}
+		.row { display: flex; gap: 12px; flex-wrap: wrap; }
+		.row > div { flex: 1 1 260px; }
+		label { display: block; font-weight: 600; margin-bottom: 6px; }
+		input {
+			width: 100%;
+			padding: 10px 12px;
+			border: 1px solid #d1d5db;
+			border-radius: 8px;
+			font-size: 14px;
+		}
+		button {
+			padding: 12px 16px;
+			border: none;
+			border-radius: 8px;
+			cursor: pointer;
+			font-weight: 600;
+		}
+		.primary { background: #111; color: #fff; }
+		.primary:hover { background: #222; }
+		.ghost { background: #f3f4f6; color: #111; }
+		.ghost:hover { background: #e5e7eb; }
+		.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+		.status-box { padding: 10px 12px; border-radius: 8px; background: #eef2ff; color: #3730a3; margin-bottom: 12px; }
+		.status-message { padding: 12px; border-radius: 8px; margin-top: 10px; }
+		.status-success { background: #ecfdf3; color: #166534; }
+		.status-error { background: #fef2f2; color: #991b1b; }
+		.status-info { background: #eff6ff; color: #1d4ed8; }
+		.mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+	</style>
+</head>
+<body>
+	<div class="shell">
+		<h1>Seller Portal</h1>
+		<p class="lead">Update shipment and delivery status for buyer visibility.</p>
+
+		<div class="card">
+			<div class="row">
+				<div>
+					<label for="orderIdInput">Order ID</label>
+					<input id="orderIdInput" type="number" min="1" placeholder="e.g. 1" value="<%= orderId %>">
+				</div>
+				<div>
+					<label>Status</label>
+					<div id="statusText" class="status-box">Waiting to load order...</div>
+				</div>
+			</div>
+			<div class="actions">
+				<button class="primary" onclick="loadOrder()">Load Order</button>
+				<button class="ghost" onclick="markShipped()">Mark Shipped</button>
+				<button class="ghost" onclick="markDelivered()">Mark Delivered</button>
+			</div>
+			<div id="statusMessage"></div>
+		</div>
+
+		<div class="card">
+			<h3>Order Snapshot</h3>
+			<div class="row">
+				<div>
+					<label>Product</label>
+					<div id="productName"><%= product.name %></div>
+				</div>
+				<div>
+					<label>Price (ETH)</label>
+					<div id="productPrice">-</div>
+				</div>
+				<div>
+					<label>Buyer</label>
+					<div id="buyerAddress" class="mono">-</div>
+				</div>
+			</div>
+			<div class="row">
+				<div>
+					<label>Current Status</label>
+					<div id="orderStatus">-</div>
+				</div>
+				<div>
+					<label>Paid?</label>
+					<div id="paidStatus">-</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+	<script>
+		let web3;
+		let contract;
+		let userAccount;
+		const presetOrderId = '<%= orderId %>';
+		const contractABI = <%- contractABI %>;
+		const contractData = <%- contractData %>;
+
+		const statusMap = {
+			'0': 'Pending',
+			'1': 'Processing',
+			'2': 'Shipped',
+			'3': 'Delivered',
+			'4': 'Confirmed'
+		};
+
+		async function init() {
+			try {
+				web3 = new Web3('http://127.0.0.1:7545');
+				const accounts = await web3.eth.getAccounts();
+				userAccount = accounts[0];
+
+				const deployedNetwork = contractData.networks[5777];
+				if (!deployedNetwork) {
+					showMessage('Contract not deployed on Ganache (5777).', 'error');
+					return;
+				}
+
+				contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
+
+				if (presetOrderId) {
+					document.getElementById('orderIdInput').value = presetOrderId;
+					await loadOrder();
+				} else {
+					showMessage('Enter an order ID and click Load.', 'info');
+				}
+			} catch (err) {
+				console.error(err);
+				showMessage('Failed to initialize Web3: ' + err.message, 'error');
+			}
+		}
+
+		async function loadOrder() {
+			try {
+				const orderId = document.getElementById('orderIdInput').value;
+				if (!orderId) {
+					showMessage('Please enter an order ID.', 'error');
+					return;
+				}
+
+				const order = await contract.methods.getOrder(orderId).call();
+				document.getElementById('productName').textContent = order.productName;
+				document.getElementById('productPrice').textContent = web3.utils.fromWei(order.totalAmount, 'ether');
+				document.getElementById('buyerAddress').textContent = order.buyer;
+				document.getElementById('orderStatus').textContent = statusMap[order.status];
+				document.getElementById('paidStatus').textContent = order.isPaid ? 'Yes' : 'No';
+				document.getElementById('statusText').textContent = statusMap[order.status];
+				showMessage('Order loaded.', 'success');
+			} catch (err) {
+				console.error(err);
+				showMessage('Could not load order: ' + err.message, 'error');
+			}
+		}
+
+		async function markShipped() {
+			await updateStatus(2, 'Seller marked as shipped');
+		}
+
+		async function markDelivered() {
+			await updateStatus(3, 'Seller marked as delivered');
+		}
+
+		async function updateStatus(statusCode, description) {
+			try {
+				const orderId = document.getElementById('orderIdInput').value;
+				if (!orderId) {
+					showMessage('Please enter an order ID.', 'error');
+					return;
+				}
+				if (!contract || !userAccount) {
+					showMessage('Web3 not ready. Refresh the page.', 'error');
+					return;
+				}
+
+				await contract.methods.updateOrderStatus(orderId, statusCode, description)
+					.send({ from: userAccount, gas: 500000 });
+
+				showMessage('Status updated to ' + statusMap[statusCode] + '.', 'success');
+				await loadOrder();
+			} catch (err) {
+				console.error(err);
+				showMessage('Failed to update status: ' + err.message, 'error');
+			}
+		}
+
+		function showMessage(message, type) {
+			const box = document.getElementById('statusMessage');
+			box.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+		}
+
+		window.addEventListener('load', init);
+	</script>
+</body>
+</html>

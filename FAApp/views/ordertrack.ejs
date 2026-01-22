@@ -142,13 +142,13 @@
                 <h2>Order summary:</h2>
                 <div class="order-item" id="orderProduct"><%= product.name %></div>
                 <div class="order-total" id="orderPrice">$<%= product.price %></div>
+                <div class="order-status" id="orderStatus"></div>
             </div>
 
             <button class="details-button" onclick="viewDetails()">Details</button>
 
             <div class="nav-links">
                 <a href="/buy" class="nav-link">← Back to Shop</a>
-                <a href="/confirm?orderId=<%= orderId %>" class="nav-link">Confirm Delivery →</a>
             </div>
         <% } %>
     </div>
@@ -162,18 +162,30 @@
         const contractABI = <%- contractABI %>;
         const contractData = <%- contractData %>;
 
+        const statusMap = {
+            '0': 'Pending',
+            '1': 'Processing',
+            '2': 'Shipped',
+            '3': 'Delivered',
+            '4': 'Confirmed'
+        };
+
         async function initWeb3() {
-            if (typeof window.ethereum !== 'undefined') {
-                web3 = new Web3(window.ethereum);
+            try {
+                web3 = new Web3('http://127.0.0.1:7545');
                 const accounts = await web3.eth.getAccounts();
                 userAccount = accounts[0];
-                const networkId = await web3.eth.net.getId();
+                const networkId = 5777;
                 const deployedNetwork = contractData.networks[networkId];
                 
                 if (deployedNetwork) {
                     contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
                     await loadOrderData();
+                } else {
+                    console.error('Contract not deployed on Ganache network 5777');
                 }
+            } catch (error) {
+                console.error('Error initializing Web3:', error);
             }
         }
 
@@ -182,6 +194,7 @@
                 const order = await contract.methods.getOrder(orderId).call();
                 document.getElementById('orderProduct').textContent = order.productName;
                 document.getElementById('orderPrice').textContent = '$' + web3.utils.fromWei(order.totalAmount, 'ether');
+                document.getElementById('orderStatus').textContent = 'Status: ' + statusMap[order.status];
             } catch (error) {
                 console.error('Error loading order:', error);
             }

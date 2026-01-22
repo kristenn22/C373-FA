@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - LegitLah</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .login-container {
+            background: white;
+            padding: 60px 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .login-title {
+            font-size: 36px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 40px;
+            line-height: 1.2;
+        }
+
+        .connect-btn {
+            background: #000;
+            color: white;
+            padding: 16px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            min-width: 200px;
+        }
+
+        .connect-btn:hover {
+            background: #333;
+        }
+
+        .login-subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-top: 40px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1 class="login-title">Connect with your wallet to continue</h1>
+        <button class="connect-btn" onclick="connectMetaMask()">MetaMask</button>
+        <p class="login-subtitle">Connect your MetaMask wallet to access LegitLah and start trading securely on the blockchain.</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script>
+        async function connectMetaMask() {
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const web3 = new Web3(window.ethereum);
+                    
+                    const accounts = await web3.eth.getAccounts();
+                    const userAccount = accounts[0];
+
+                    const contractData = await fetch('/build/OrderContract.json').then(r => r.json());
+                    const networkId = await web3.eth.net.getId();
+                    const deployedNetwork = contractData.networks[networkId];
+                    
+                    if (deployedNetwork) {
+                        const contract = new web3.eth.Contract(contractData.abi, deployedNetwork.address);
+                        const orderCount = await contract.methods.getOrderCount().call();
+                        
+                        await fetch('/web3ConnectData', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contractAddress: deployedNetwork.address,
+                                acct: userAccount,
+                                orderCnt: orderCount
+                            })
+                        });
+
+                        window.location.href = '/buy';
+                    } else {
+                        alert('Please connect to the correct network (Ganache)');
+                    }
+                } else {
+                    alert('Please install MetaMask!');
+                    window.open('https://metamask.io/download/', '_blank');
+                }
+            } catch (error) {
+                console.error('Error connecting to MetaMask:', error);
+                alert('Failed to connect: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

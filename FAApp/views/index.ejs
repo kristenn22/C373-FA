@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LegiLah - Buy and sell with ease</title>
+    <title>LegitLah - Buy and sell with ease</title>
     <style>
         * {
             margin: 0;
@@ -35,6 +35,8 @@
             display: flex;
             gap: 30px;
             align-items: center;
+            flex: 1;
+            margin-left: 50px;
         }
 
         .nav-link {
@@ -46,6 +48,12 @@
 
         .nav-link:hover {
             color: #000;
+        }
+
+        .wallet-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .account-btn {
@@ -255,11 +263,16 @@
         }
 
         .wallet-info {
-            background: #f0f9ff;
+            background: transparent;
             color: #0369a1;
-            padding: 10px 20px;
-            border-radius: 6px;
+            padding: 0;
+            border-radius: 0;
             font-size: 14px;
+        }
+
+        .connect-wallet {
+            position: static;
+            z-index: auto;
         }
 
         .modal {
@@ -390,30 +403,22 @@
     </style>
 </head>
 <body>
-    <div class="connect-wallet">
-        <% if (!loading && acct) { %>
-            <div class="wallet-info">
-                🔗 <%= acct.substring(0, 6) %>...<%=acct.substring(38) %>
-            </div>
-        <% } else { %>
-            <button class="wallet-btn" onclick="connectMetaMask()">Connect Wallet</button>
-        <% } %>
-    </div>
-
     <div class="header">
-        <div class="logo">LegiLah</div>
+        <div class="logo">LegitLah</div>
         <nav class="nav-links">
             <a href="/" class="nav-link">Home</a>
-            <a href="#" class="nav-link" onclick="openAboutModal(event)">About</a>
+            <a href="#" class="nav-link" onclick="openAboutModal(event)">About Us</a>
         </nav>
+        <div class="wallet-section connect-wallet">
+        </div>
     </div>
 
     <section class="hero-section">
         <h1 class="hero-title">Buy and sell with ease</h1>
-        <p class="hero-subtitle">Why you should choose us</p>
+        <p class="hero-subtitle">Welcome to LegitLah</p>
         <div class="cta-buttons">
             <a href="/buy" class="btn-primary">Get Started</a>
-            <a href="#" class="btn-secondary">Sign In</a>
+            <a href="/login" class="btn-secondary">Login</a>
         </div>
     </section>
 
@@ -433,7 +438,7 @@
 
             <div class="product-card">
                 <div class="product-image">
-                    <div style="padding:40px;text-align:center;color:#999;font-size:48px;">⌨️</div>
+                    <img src="/images/keyboard.jpg" alt="One Piece The Monsters">
                 </div>
                 <div class="product-info">
                     <div class="product-name">Kobotics Classic Bay</div>
@@ -444,10 +449,10 @@
 
             <div class="product-card">
                 <div class="product-image">
-                    <div style="padding:40px;text-align:center;color:#999;font-size:48px;">👟</div>
+                    <img src="/images/nikeshoes.jpg" alt="nike shoes">
                 </div>
                 <div class="product-info">
-                    <div class="product-name">Nike Show</div>
+                    <div class="product-name">Nike Shoe</div>
                     <div class="product-description">Limited edition<br>Size 9-12 available</div>
                     <div class="product-price">$189.00</div>
                 </div>
@@ -474,7 +479,7 @@
             <div class="about-section">
                 <h3>Details about the business</h3>
                 <ul>
-                    <li><strong>Business model:</strong> LegiLah is a Carousel-style online marketplace where users can buy and sell second-hand or brand-new items.</li>
+                    <li><strong>Business model:</strong> LegitLah is a Carousel-style online marketplace where users can buy and sell second-hand or brand-new items.</li>
                     <li><strong>Target users:</strong> Everyday buyers, casual sellers, and small businesses that want a safer and more transparent platform to sell their products.</li>
                     <li><strong>Core features:</strong> Product listings, chat between buyer and seller, shopping and delivery tracking, and seller rating and reputation.</li>
                     <li><strong>Pain points we address:</strong> Fraud, manipulated ratings, unclear delivery status, and off-platform payments that are hard to verify.</li>
@@ -484,7 +489,7 @@
 
             <div class="about-section">
                 <h3>Advantages of incorporating blockchain into your business</h3>
-                <p>When businesses and sellers use a blockchain-backed marketplace like LegiLah, they gain extra benefits that traditional platforms cannot easily provide.</p>
+                <p>When businesses and sellers use a blockchain-backed marketplace like LegitLah, they gain extra benefits that traditional platforms cannot easily provide.</p>
                 <div class="benefits-grid">
                     <div class="benefit-item">
                         <strong>Tamper-resistant records</strong> - Orders, ratings, and key delivery updates can be recorded in a way that is difficult to secretly change or delete.
@@ -508,7 +513,7 @@
             </div>
 
             <div class="about-section">
-                <h3>How we apply blockchain in LegiLah</h3>
+                <h3>How we apply blockchain in LegitLah</h3>
                 <ul>
                     <li>We use a Proof of Stake (PoS) style blockchain, which is faster and more energy-efficient than traditional Proof of Work.</li>
                     <li>The chain supports smart contracts, allowing automated logic for updating ratings, recording delivery events, and managing transaction data.</li>

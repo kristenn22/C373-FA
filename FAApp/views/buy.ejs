@@ -213,6 +213,36 @@
         const contractABI = <%- contractABI %>;
         const contractData = <%- contractData %>;
         
+        // Initialize Web3 with Ganache on page load
+        window.addEventListener('load', async () => {
+            try {
+                web3 = new Web3('http://127.0.0.1:7545');
+                
+                if (contractData && contractData.networks) {
+                    // Try to connect to network 5777 (Ganache)
+                    const networkId = 5777;
+                    const deployedNetwork = contractData.networks[networkId];
+                    
+                    if (deployedNetwork && deployedNetwork.address) {
+                        contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
+                        console.log('Contract initialized:', deployedNetwork.address);
+                        
+                        // Get first Ganache account
+                        const accounts = await web3.eth.getAccounts();
+                        if (accounts && accounts.length > 0) {
+                            userAccount = accounts[0];
+                            console.log('Using account:', userAccount);
+                        }
+                    } else {
+                        showMessage('Contract not deployed to Ganache network 5777', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing Web3:', error);
+                showMessage('Error connecting to Ganache: ' + error.message, 'error');
+            }
+        });
+        
         async function connectMetaMask() {
             try {
                 if (typeof window.ethereum !== 'undefined') {
@@ -252,40 +282,45 @@
         }
 
         async function buyProduct() {
-            if (!contract || !userAccount) {
-                showMessage('Please connect MetaMask first', 'error');
-                return;
-            }
-
             const buyButton = document.getElementById('buyButton');
             buyButton.disabled = true;
             buyButton.textContent = 'Processing...';
 
             try {
-                showMessage('Creating order on blockchain...', 'info');
+                if (!web3 || !contract || !userAccount) {
+                    showMessage('Error: Web3 not initialized. Please refresh the page.', 'error');
+                    buyButton.disabled = false;
+                    buyButton.textContent = 'Buy';
+                    return;
+                }
+
+                showMessage('Creating order on blockchain using Ganache...', 'info');
 
                 const productName = "<%= product.name %>";
-                const price = web3.utils.toWei('<%= product.price %>', 'ether');
+                const productPriceUSD = "<%= product.price %>";
+                // Use 0.1 ETH as payment (price is in USD, not ETH)
+                const paymentETH = web3.utils.toWei('0.1', 'ether');
                 const imageUrl = "<%= product.imageUrl %>";
                 const description = "<%= product.description %>";
 
-                // Create order
+                // Create order on blockchain
                 const createResult = await contract.methods.createOrder(
                     userAccount,
                     productName,
-                    price,
+                    productPriceUSD,
                     imageUrl,
                     description
-                ).send({ from: userAccount });
+                ).send({ from: userAccount, gas: 1000000 });
 
                 const orderId = createResult.events.OrderCreated.returnValues.orderId;
 
                 showMessage('Order created! Processing payment...', 'info');
 
-                // Pay for order
+                // Pay for order (0.1 ETH)
                 await contract.methods.payForOrder(orderId).send({
                     from: userAccount,
-                    value: price
+                    value: paymentETH,
+                    gas: 500000
                 });
 
                 // Send confirmation to backend
@@ -293,15 +328,16 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        orderId: orderId,
-                        txHash: createResult.transactionHash
+                        orderId: orderId.toString(),
+                        txHash: createResult.transactionHash,
+                        account: userAccount
                     })
                 });
 
-                showMessage('Order placed successfully! Redirecting...', 'success');
+                showMessage('Order placed successfully! Redirecting to order tracker...', 'success');
                 
                 setTimeout(() => {
-                    window.location.href = '/ordertrack?orderId=' + orderId;
+                    window.location.href = '/ordertrack?orderId=' + orderId.toString();
                 }, 2000);
 
             } catch (error) {
@@ -322,22 +358,6 @@
                 }, 5000);
             }
         }
-
-        // Auto-connect if already authorized
-        window.addEventListener('load', async () => {
-            if (typeof window.ethereum !== 'undefined' && '<%= acct %>' === '') {
-                try {
-                    const accounts = await window.ethereum.request({ 
-                        method: 'eth_accounts' 
-                    });
-                    if (accounts.length > 0) {
-                        connectMetaMask();
-                    }
-                } catch (error) {
-                    console.error('Error checking accounts:', error);
-                }
-            }
-        });
     </script>
 </body>
 </html>

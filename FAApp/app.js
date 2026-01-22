@@ -15,7 +15,16 @@ app.use(express.json());
 
 //start the server
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, async () => {
+    console.log(`Server running on port ${PORT}`);
+    // Initialize Web3 and load blockchain data on startup
+    try {
+        await loadWeb3();
+        await loadBlockchainData();
+    } catch (error) {
+        console.warn('Note: Ganache may not be running. Please start Ganache on port 7545');
+    }
+});
 
 // Load contract ABI and full contract data
 let contractABI = [];
@@ -34,6 +43,65 @@ try {
 var account = '';
 var orderCount = 0;
 var loading = true;
+var GanacheWeb3;
+var contractInfo;
+var listOfProducts = [];
+var listOfProducts = [];
+var noOfProducts = 0;
+
+// Initialize Web3 connection to Ganache
+async function loadWeb3() {
+    try {
+        GanacheWeb3 = new Web3("http://127.0.0.1:7545");
+        console.log('Web3 connected to Ganache at http://127.0.0.1:7545');
+    } catch (error) {
+        console.error('Error connecting to Ganache:', error);
+    }
+}
+
+// Load blockchain data
+async function loadBlockchainData() {
+    try {
+        loading = true;
+        const web3 = GanacheWeb3;
+        
+        // Load account from the blockchain
+        const accounts = await web3.eth.getAccounts();
+        account = accounts[0];
+        console.log('Loaded account:', account);
+        
+        // Get network ID
+        const networkId = await web3.eth.net.getId();
+        console.log('Network ID:', networkId);
+        
+        // Read network data
+        const networkData = contractData.networks[networkId];
+        
+        if (!networkData) {
+            throw new Error('Order contract not deployed to detected network');
+        }
+        
+        // Initialize the contract
+        contractInfo = new web3.eth.Contract(contractABI, networkData.address);
+        console.log('Contract initialized at:', networkData.address);
+        
+        // Get order count from contract
+        const cnt = await contractInfo.methods.getOrderCount().call();
+        noOfProducts = cnt;
+        console.log(`Order count from blockchain: ${cnt.toString()}`);
+        
+        loading = false;
+        return {
+            account,
+            contractInfo,
+            orderCount
+        };
+    } catch (error) {
+        console.error('Error loading blockchain data:', error);
+        loading = false;
+        throw error;
+    }
+}
 
 // Sample product data
 const sampleProduct = {
@@ -43,7 +111,7 @@ const sampleProduct = {
     description: "Limited edition collectible"
 };
 
-// Define routes - home page
+// Home page
 app.get('/', async(req, res) => {   
     try {
         res.render('index', {
@@ -52,6 +120,47 @@ app.get('/', async(req, res) => {
         });
     } catch (error) {
         console.error('Error in home route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+// Login page
+app.get('/login', async(req, res) => {
+    try {
+        res.render('login', {
+            acct: account,
+            loading: false,
+            productData: null
+        });
+    } catch (error) {
+        console.error('Error in login route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+// Register page
+app.get('/register', async(req, res) => {
+    try {
+        res.render('regsiter', {
+            acct: account,
+            loading: loading
+        });
+    } catch (error) {
+        console.error('Error in register route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+// Product page
+app.get('/products', async(req, res) => {
+    try {
+        res.render('products', {
+            product: sampleProduct,
+            acct: account,
+            loading: loading
+        });
+    } catch (error) {
+        console.error('Error in products route:', error);
         res.status(500).send('Server error');
     }
 });
@@ -68,6 +177,60 @@ app.get('/buy', async(req, res) => {
         });
     } catch (error) {
         console.error('Error in buy route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+// Order Tracker
+app.get('/ordertrack', async(req, res) => {
+    try {
+        const orderId = req.query.orderId || '';
+        res.render('ordertrack', {
+            orderId: orderId,
+            product: sampleProduct,
+            acct: account,
+            loading: loading,
+            contractABI: JSON.stringify(contractABI),
+            contractData: JSON.stringify(contractData)
+        });
+    } catch (error) {
+        console.error('Error in ordertrack route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+// Order Details (with path parameter)
+app.get('/orderdetails/:orderId', async(req, res) => {
+    try {
+        res.render('orderdetails', {
+            orderId: req.params.orderId,
+            product: sampleProduct,
+            acct: account,
+            loading: loading,
+            contractABI: JSON.stringify(contractABI),
+            contractData: JSON.stringify(contractData)
+        });
+    } catch (error) {
+        console.error('Error in orderdetails route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+// Order Details (with query parameter)
+app.get('/orderdetails', async(req, res) => {
+    const orderId = req.query.orderId || '';
+    
+    try {
+        res.render('orderdetails', {
+            orderId: orderId,
+            product: sampleProduct,
+            acct: account,
+            loading: loading,
+            contractABI: JSON.stringify(contractABI),
+            contractData: JSON.stringify(contractData)
+        });
+    } catch (error) {
+        console.error('Error in orderdetails route:', error);
         res.status(500).send('Server error');
     }
 });
@@ -118,47 +281,9 @@ app.post('/createOrder', express.json(), async (req, res) => {
     }
 });
 
-// Order tracker page
-app.get('/ordertrack', async(req, res) => {
-    const orderId = req.query.orderId || 1;
-    
-    try {
-        res.render('ordertrack', {
-            orderId: orderId,
-            product: sampleProduct,
-            acct: account,
-            loading: loading,
-            contractABI: JSON.stringify(contractABI),
-            contractData: JSON.stringify(contractData)
-        });
-    } catch (error) {
-        console.error('Error in ordertrack route:', error);
-        res.status(500).send('Server error');
-    }
-});
-
-// Order details page
-app.get('/orderdetails', async(req, res) => {
-    const orderId = req.query.orderId || 1;
-    
-    try {
-        res.render('orderdetails', {
-            orderId: orderId,
-            product: sampleProduct,
-            acct: account,
-            loading: loading,
-            contractABI: JSON.stringify(contractABI),
-            contractData: JSON.stringify(contractData)
-        });
-    } catch (error) {
-        console.error('Error in orderdetails route:', error);
-        res.status(500).send('Server error');
-    }
-});
-
 // Confirm delivery page
 app.get('/confirm', async(req, res) => {
-    const orderId = req.query.orderId || 1;
+    const orderId = req.query.orderId || '';
     
     try {
         res.render('confirm', {
