@@ -26,18 +26,14 @@ var sellerContractInfo;
 var userCart = {}; // Store cart items with account as key
 var loggedInUsers = {}; // Track logged in users
 
-
-unction isSignedIn() {
+// Check if user is signed in (has account connected)
+function isSignedIn() {
     return account && account.trim() !== '' && !loading;
 }
 
 function isAdmin() {
-    const adminAccounts = (process.env.ADMIN_ACCOUNTS || '')
-        .split(',')
-        .map((value) => value.trim().toLowerCase())
-        .filter(Boolean);
-
-    return isSignedIn() && adminAccounts.includes(account.trim().toLowerCase());
+    // Any connected Ganache account is admin
+    return isSignedIn();
 }
 
 
@@ -189,11 +185,12 @@ app.get('/register', async(req, res) => {
 // Sign up page
 app.get('/signup', async(req, res) => {
     try {
-        res.render('regsiter', {
-            acct: account,
-            loading: loading
-        });
-
+        res.render('regsiter', getCommonData(req));
+    } catch (error) {
+        console.error('Error in signup route:', error);
+        res.status(500).send('Server error');
+    }
+});
 
 // User home page (requires login)
 app.get('/user-home', (req, res) => {
@@ -201,9 +198,7 @@ app.get('/user-home', (req, res) => {
         return res.redirect('/login');
     }
 
-    return res.render('user-home', {
-        acct: account
-    });
+    return res.render('user-home', getCommonData(req));
 });
 
 // Admin page (requires admin account)
@@ -213,18 +208,10 @@ app.get('/admin', (req, res) => {
     }
 
     if (!isAdmin()) {
-        return res.status(403).send('Forbidden');
+        return res.status(403).send('Forbidden - Admin access only');
     }
 
-    return res.render('admin', {
-        acct: account
-    });
-});
-
-    } catch (error) {
-        console.error('Error in signup route:', error);
-        res.status(500).send('Server error');
-    }
+    return res.render('admin', getCommonData(req));
 });
 
 
