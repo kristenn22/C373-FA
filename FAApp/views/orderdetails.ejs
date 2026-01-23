@@ -357,6 +357,11 @@
                     <span class="details-label">Payment Status:</span>
                     <span class="details-value" id="paymentStatus">Paid</span>
                 </div>
+
+                <div class="details-item">
+                    <span class="details-label">Tracking Number:</span>
+                    <span class="details-value" id="trackingNumber">Loading...</span>
+                </div>
             </div>
 
             <!-- Tracking History -->
@@ -450,6 +455,9 @@
                 // Load tracking history
                 loadTrackingHistory(tracking);
                 
+                // Load tracking number from seller contract
+                await loadTrackingNumber();
+                
                 const orderStatus = Number(order.status);
                 
                 // Show confirm button only when seller marks as Delivered (status = 3)
@@ -480,6 +488,30 @@
                 
             } catch (error) {
                 console.error('Error loading order details:', error);
+            }
+        }
+
+        async function loadTrackingNumber() {
+            try {
+                // Make AJAX call to backend to get tracking number
+                const response = await fetch(`/getTrackingNumber?orderId=${orderId}`);
+                const data = await response.json();
+                
+                const trackingNumberEl = document.getElementById('trackingNumber');
+                
+                if (data.trackingNumber && data.trackingNumber.trim() !== '') {
+                    trackingNumberEl.textContent = data.trackingNumber;
+                    trackingNumberEl.style.color = '#2563eb';
+                    trackingNumberEl.style.fontWeight = '600';
+                    console.log('✓ Tracking number loaded:', data.trackingNumber);
+                } else {
+                    trackingNumberEl.textContent = 'Not shipped yet';
+                    trackingNumberEl.style.color = '#999';
+                    console.log('Tracking number not available yet');
+                }
+            } catch (error) {
+                console.error('Error loading tracking number:', error);
+                document.getElementById('trackingNumber').textContent = 'N/A';
             }
         }
 

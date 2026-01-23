@@ -721,6 +721,18 @@ app.post('/shipOrder', express.json(), async (req, res) => {
         console.log('Tracking number:', trackingNumber);
         console.log('Transaction hash:', txHash);
         
+        // Update the tracking number in the smart contract
+        if (orderContractInfo && trackingNumber) {
+            try {
+                const tx = await orderContractInfo.methods.updateTrackingNumber(orderId, trackingNumber)
+                    .send({ from: account, gas: 500000 });
+                console.log('Tracking number updated in contract:', tx);
+            } catch (contractError) {
+                console.warn('Could not update tracking number in contract:', contractError.message);
+                // Continue anyway, tracking was likely updated on seller contract side
+            }
+        }
+        
         res.json({
             success: true,
             message: 'Order shipped successfully',
@@ -754,6 +766,197 @@ app.post('/releasePayment', express.json(), async (req, res) => {
         res.status(500).json({
             success: false,
             message: error.message
+        });
+    }
+});
+
+// Get tracking info for seller order
+app.get('/getSellerTrackingInfo', express.json(), async (req, res) => {
+    try {
+        const orderId = req.query.orderId;
+        
+        if (!orderId || !sellerContractInfo) {
+            return res.status(400).json({
+                success: false,
+                message: 'Order ID required or contract not available'
+            });
+        }
+        
+        // Call contract method to get tracking info
+        const trackingInfo = await sellerContractInfo.methods.getTrackingInfo(orderId).call({
+            from: account
+        });
+        
+        res.json({
+            success: true,
+            status: trackingInfo.status,
+            trackingNumber: trackingInfo.trackingNumber,
+            timestamp: trackingInfo.timestamp
+        });
+    } catch (error) {
+        console.error('Error getting seller tracking info:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// Get tracking history for order
+app.get('/getTrackingHistory', express.json(), async (req, res) => {
+    try {
+        const orderId = req.query.orderId;
+        
+        if (!orderId || !orderContractInfo) {
+            return res.status(400).json({
+                success: false,
+                message: 'Order ID required or contract not available'
+            });
+        }
+        
+        // Call contract method to get tracking history
+        const trackingHistory = await orderContractInfo.methods.getTrackingHistory(orderId).call({
+            from: account
+        });
+        
+        res.json({
+            success: true,
+            trackingHistory: trackingHistory
+        });
+    } catch (error) {
+        console.error('Error getting tracking history:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// Get tracking number - accessible by both seller and buyer
+app.get('/getTrackingNumber', express.json(), async (req, res) => {
+    try {
+        const orderId = req.query.orderId;
+        
+        if (!orderId) {
+            return res.status(400).json({
+                success: false,
+                trackingNumber: "",
+                message: 'Order ID required'
+            });
+        }
+        
+        if (!orderContractInfo) {
+            return res.status(400).json({
+                success: false,
+                trackingNumber: "",
+                message: 'Order contract not available'
+            });
+        }
+        
+        try {
+            // Call contract method to get tracking number from OrderContract
+            const trackingNumber = await orderContractInfo.methods.getTrackingNumber(orderId).call({
+                from: account
+            });
+            
+            console.log('Tracking number retrieved for order', orderId, ':', trackingNumber);
+            
+            res.json({
+                success: true,
+                trackingNumber: trackingNumber || ""
+            });
+        } catch (contractError) {
+            console.error('Contract call error:', contractError.message);
+            
+            // Return empty tracking number if order doesn't exist or not shipped yet
+            res.json({
+                success: false,
+                trackingNumber: "",
+                message: contractError.message || 'Tracking number not available'
+            });
+        }
+    } catch (error) {
+        console.error('Error getting tracking number:', error);
+        res.status(500).json({
+            success: false,
+            trackingNumber: "",
+            message: error.message || 'Could not retrieve tracking number'
+        });
+    }
+});
+
+// Update tracking number for an order
+app.post('/updateTrackingNumber', express.json(), async (req, res) => {
+    try {
+        const { orderId, trackingNumber } = req.body;
+        
+        if (!orderId || !trackingNumber) {
+            return res.status(400).json({
+                success: false,
+                message: 'Order ID and tracking number required'
+            });
+        }
+        
+        if (!orderContractInfo) {
+            return res.status(400).json({
+                success: false,
+                message: 'Order contract not available'
+            });
+        }
+        
+        console.log('Updating tracking number for order:', orderId, 'Tracking:', trackingNumber);
+        
+        // Call contract method to update tracking number
+        const tx = await orderContractInfo.methods.updateTrackingNumber(orderId, trackingNumber)
+            .send({ from: account, gas: 500000 });
+        
+        console.log('Tracking number updated:', tx);
+        
+        res.json({
+            success: true,
+            message: 'Tracking number updated successfully',
+            orderId: orderId,
+            trackingNumber: trackingNumber,
+            txHash: tx.transactionHash
+        });
+    } catch (error) {
+        console.error('Error updating tracking number:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// Get full tracking info from OrderContract - accessible by both buyer and seller
+app.get('/getFullTrackingInfo', express.json(), async (req, res) => {
+    try {
+        const orderId = req.query.orderId;
+        
+        if (!orderId || !orderContractInfo) {
+            return res.status(400).json({
+                success: false,
+                message: 'Order ID required or contract not available'
+            });
+        }
+        
+        // Call contract method to get full tracking info
+        const trackingInfo = await orderContractInfo.methods.getFullTrackingInfo(orderId).call({
+            from: account
+        });
+        
+        res.json({
+            success: true,
+            orderId: trackingInfo.orderId,
+            productName: trackingInfo.productName,
+            currentStatus: trackingInfo.currentStatus,
+            history: trackingInfo.history
+        });
+    } catch (error) {
+        console.error('Error getting full tracking info:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Only buyer or seller can view tracking information'
         });
     }
 });

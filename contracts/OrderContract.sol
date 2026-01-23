@@ -44,11 +44,13 @@ contract OrderContract {
     mapping(uint => Order) public orders;
     mapping(uint => TrackingUpdate[]) public trackingHistory;
     mapping(address => uint[]) public userOrders;
+    mapping(uint => string) public trackingNumbers; // Store tracking numbers
 
     event OrderCreated(uint orderId, address buyer, uint amount);
     event OrderPaid(uint orderId, address buyer, uint amount);
     event OrderStatusUpdated(uint orderId, OrderStatus status);
     event DeliveryConfirmed(uint orderId, address buyer);
+    event TrackingNumberUpdated(uint orderId, string trackingNumber);
 
     // Create a new order
     function createOrder(
@@ -125,6 +127,39 @@ contract OrderContract {
         Order storage order = orders[_orderId];
         
         order.status = _status;
+        
+        string memory statusText;
+        if (_status == OrderStatus.Processing) {
+            statusText = "Processing";
+        } else if (_status == OrderStatus.Shipped) {
+            statusText = "Shipped";
+        } else if (_status == OrderStatus.Delivered) {
+            statusText = "Delivered";
+        } else if (_status == OrderStatus.Confirmed) {
+            statusText = "Confirmed";
+        }
+        
+        trackingHistory[_orderId].push(TrackingUpdate({
+            status: statusText,
+            description: _description,
+            timestamp: block.timestamp
+        }));
+        
+        emit OrderStatusUpdated(_orderId, _status);
+    }
+
+    // Update order status with tracking number (for shipping)
+    function updateOrderStatusWithTracking(uint _orderId, OrderStatus _status, string memory _description, string memory _trackingNumber) public {
+        require(_orderId > 0 && _orderId <= orderCount, "Invalid order ID");
+        Order storage order = orders[_orderId];
+        
+        order.status = _status;
+        
+        // Store tracking number if status is Shipped
+        if (_status == OrderStatus.Shipped && bytes(_trackingNumber).length > 0) {
+            trackingNumbers[_orderId] = _trackingNumber;
+            emit TrackingNumberUpdated(_orderId, _trackingNumber);
+        }
         
         string memory statusText;
         if (_status == OrderStatus.Processing) {
@@ -231,5 +266,68 @@ contract OrderContract {
     // Get order count
     function getOrderCount() public view returns (uint) {
         return orderCount;
+    }
+
+    // Get complete tracking info - accessible by both buyer and seller
+    function getFullTrackingInfo(uint _orderId) public view returns (
+        uint orderId,
+        string memory productName,
+        string memory currentStatus,
+        TrackingUpdate[] memory history
+    ) {
+        require(_orderId > 0 && _orderId <= orderCount, "Invalid order ID");
+        Order memory order = orders[_orderId];
+        require(
+            msg.sender == order.buyer || msg.sender == order.seller,
+            "Only buyer or seller can view tracking information"
+        );
+        
+        string memory statusText;
+        if (order.status == OrderStatus.Processing) {
+            statusText = "Processing";
+        } else if (order.status == OrderStatus.Shipped) {
+            statusText = "Shipped";
+        } else if (order.status == OrderStatus.Delivered) {
+            statusText = "Delivered";
+        } else if (order.status == OrderStatus.Confirmed) {
+            statusText = "Confirmed";
+        } else {
+            statusText = "Pending";
+        }
+        
+        return (
+            orderId,
+            order.product.name,
+            statusText,
+            trackingHistory[_orderId]
+        );
+    }
+
+    // Update tracking number - can be called by seller or admin
+    function updateTrackingNumber(uint _orderId, string memory _trackingNumber) public {
+        require(_orderId > 0 && _orderId <= orderCount, "Invalid order ID");
+        require(bytes(_trackingNumber).length > 0, "Tracking number cannot be empty");
+        
+        Order storage order = orders[_orderId];
+        require(msg.sender == order.seller || msg.sender == owner, "Only seller or owner can update tracking number");
+        require(order.status == OrderStatus.Shipped, "Order must be shipped first");
+        
+        trackingNumbers[_orderId] = _trackingNumber;
+        
+        emit TrackingNumberUpdated(_orderId, _trackingNumber);
+    }
+
+    // Get tracking number - accessible by both buyer and seller
+    function getTrackingNumber(uint _orderId) public view returns (string memory) {
+        require(_orderId > 0 && _orderId <= orderCount, "Invalid order ID");
+        Order memory order = orders[_orderId];
+        
+        // Allow any connected user to view if order exists - access control is lenient for tracking
+        // But still check that order is in proper status
+        if (order.status != OrderStatus.Shipped && order.status != OrderStatus.Delivered && order.status != OrderStatus.Confirmed) {
+            return ""; // Return empty string if not shipped yet
+        }
+        
+        return trackingNumbers[_orderId]; // Return tracking number (may be empty if not set)
     }
 }

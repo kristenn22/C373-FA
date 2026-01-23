@@ -187,6 +187,10 @@
 					<div id="modalPaidStatus" style="padding: 10px; background: #f3f4f6; border-radius: 6px;">-</div>
 				</div>
 			</div>
+			<div style="margin-top: 15px;">
+				<label>Tracking Number</label>
+				<div id="modalTrackingNumber" class="mono" style="padding: 10px; background: #e0f2fe; border: 2px solid #0ea5e9; border-radius: 6px; font-weight: 600; color: #0369a1;">-</div>
+			</div>
 			<div style="margin-top: 20px;">
 				<label>Update Status</label>
 				<div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -357,6 +361,29 @@
 					paidStatusEl.style.fontWeight = '600';
 				}
 				
+				// Load tracking number
+				const trackingEl = document.getElementById('modalTrackingNumber');
+				try {
+					const trackingNumber = await orderContract.methods.getTrackingNumber(orderId).call({ from: userAccount });
+					if (trackingNumber && trackingNumber.trim() !== '') {
+						trackingEl.textContent = trackingNumber;
+						trackingEl.style.background = '#e0f2fe';
+						trackingEl.style.border = '2px solid #0ea5e9';
+						trackingEl.style.color = '#0369a1';
+					} else {
+						trackingEl.textContent = 'Not shipped yet';
+						trackingEl.style.background = '#f3f4f6';
+						trackingEl.style.border = '1px solid #d1d5db';
+						trackingEl.style.color = '#999';
+					}
+				} catch (trackingError) {
+					console.warn('Could not load tracking number:', trackingError.message);
+					trackingEl.textContent = 'Not available';
+					trackingEl.style.background = '#f3f4f6';
+					trackingEl.style.border = '1px solid #d1d5db';
+					trackingEl.style.color = '#999';
+				}
+				
 				document.getElementById('modalMessage').innerHTML = '';
 
 				document.getElementById('orderModal').classList.add('show');
@@ -384,12 +411,30 @@
 				}
 
 				const statusText = statusMap[statusCode] || 'Unknown';
-				const description = `Seller updated status to ${statusText}`;
+				let description = `Seller updated status to ${statusText}`;
+				let trackingNumber = '';
 
-				const tx = await orderContract.methods.updateOrderStatus(selectedOrderId, statusCode, description)
-					.send({ from: userAccount, gas: 500000 });
+				// If marking as Shipped (status 2), generate random tracking number
+				if (statusCode === 2) {
+					// Generate random tracking number (e.g., TRACK-XXXXXXXXXX)
+					const randomPart = Math.random().toString(36).substring(2, 12).toUpperCase();
+					const timestamp = Date.now().toString().slice(-6);
+					trackingNumber = `TRACK-${randomPart}${timestamp}`;
+					
+					description = `Order shipped with tracking number: ${trackingNumber}`;
 
-				showModalMessage(`Status updated to ${statusText}!`, 'success');
+					// Use the new function that accepts tracking number
+					const tx = await orderContract.methods.updateOrderStatusWithTracking(selectedOrderId, statusCode, description, trackingNumber)
+						.send({ from: userAccount, gas: 500000 });
+
+					showModalMessage(`Status updated to ${statusText}! Tracking: ${trackingNumber}`, 'success');
+				} else {
+					// Use regular updateOrderStatus for other statuses
+					const tx = await orderContract.methods.updateOrderStatus(selectedOrderId, statusCode, description)
+						.send({ from: userAccount, gas: 500000 });
+
+					showModalMessage(`Status updated to ${statusText}!`, 'success');
+				}
 				
 				// Reload the modal after 1 second
 				setTimeout(async () => {

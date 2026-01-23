@@ -227,4 +227,16 @@ contract SellerOrderContract {
     function getSellerOrderCount() public view returns (uint) {
         return sellerOrderCount;
     }
+
+    // Get tracking number - accessible by both seller and buyer
+    function getTrackingNumber(uint _orderId) public view returns (string memory) {
+        require(_orderId > 0 && _orderId <= sellerOrderCount, "Invalid order ID");
+        SellerOrder memory order = sellerOrders[_orderId];
+        require(
+            msg.sender == order.seller || msg.sender == order.buyer,
+            "Only seller or buyer can view tracking number"
+        );
+        require(order.isShipped, "Tracking number not available until order is shipped");
+        return order.trackingNumber;
+    }
 }
