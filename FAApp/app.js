@@ -26,6 +26,22 @@ var sellerContractInfo;
 var userCart = {}; // Store cart items with account as key
 var loggedInUsers = {}; // Track logged in users
 
+
+unction isSignedIn() {
+    return account && account.trim() !== '' && !loading;
+}
+
+function isAdmin() {
+    const adminAccounts = (process.env.ADMIN_ACCOUNTS || '')
+        .split(',')
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean);
+
+    return isSignedIn() && adminAccounts.includes(account.trim().toLowerCase());
+}
+
+
+
 // Initialize blockchain on server startup
 async function componentWillMount() {
     try {
@@ -128,37 +144,89 @@ app.get('/', async(req, res) => {
         res.status(500).send('Server error');
     }
 });
+// Get started - redirect based on sign-in status
+app.get('/get-started', (req, res) => {
+    res.redirect(isSignedIn() ? '/buy' : '/signup');
+});
 
 // Login page
 app.get('/login', async(req, res) => {
     try {
-        res.render('login', getCommonData(req));
+        res.render('login', {
+            acct: account,
+            loading: false,
+            productData: null
+        });
     } catch (error) {
         console.error('Error in login route:', error);
         res.status(500).send('Server error');
     }
 });
 
-// Handle login POST - mark user as logged in
-app.post('/login', express.json(), async(req, res) => {
+// Handle login form submission
+app.post('/login', (req, res) => {
     try {
-        const userAccount = account;
-        loggedInUsers[userAccount] = true;
-        console.log('User logged in:', userAccount);
-        
-        res.json({
-            success: true,
-            message: 'Logged in successfully',
-            isLoggedIn: true
-        });
+        res.redirect('/products');
     } catch (error) {
-        console.error('Error in login route:', error);
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        console.error('Error in login post route:', error);
+        res.status(500).send('Server error');
     }
 });
+
+// Register page
+app.get('/register', async(req, res) => {
+    try {
+        res.render('regsiter', {
+            acct: account,
+            loading: loading
+        });
+    } catch (error) {
+        console.error('Error in register route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+// Sign up page
+app.get('/signup', async(req, res) => {
+    try {
+        res.render('regsiter', {
+            acct: account,
+            loading: loading
+        });
+
+
+// User home page (requires login)
+app.get('/user-home', (req, res) => {
+    if (!isSignedIn()) {
+        return res.redirect('/login');
+    }
+
+    return res.render('user-home', {
+        acct: account
+    });
+});
+
+// Admin page (requires admin account)
+app.get('/admin', (req, res) => {
+    if (!isSignedIn()) {
+        return res.redirect('/login');
+    }
+
+    if (!isAdmin()) {
+        return res.status(403).send('Forbidden');
+    }
+
+    return res.render('admin', {
+        acct: account
+    });
+});
+
+    } catch (error) {
+        console.error('Error in signup route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
 
 // Handle logout
 app.post('/logout', express.json(), async(req, res) => {
@@ -178,19 +246,6 @@ app.post('/logout', express.json(), async(req, res) => {
             success: false,
             message: error.message
         });
-    }
-});
-
-// Register page
-app.get('/register', async(req, res) => {
-    try {
-        res.render('regsiter', {
-            acct: account,
-            loading: loading
-        });
-    } catch (error) {
-        console.error('Error in register route:', error);
-        res.status(500).send('Server error');
     }
 });
 
