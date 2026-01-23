@@ -146,22 +146,7 @@
     </style>
 </head>
 <body>
-    <header class="header">
-        <a href="/" class="logo">LegitLah</a>
-        <nav class="nav-links">
-            <a href="/products" class="nav-link">Products</a>
-            <a href="/buyerorders" class="nav-link">My Orders</a>
-            <a href="#" onclick="openBuyModal()" class="nav-link">Buy</a>
-            <a href="/cart" class="cart-icon" title="Cart">🛒</a>
-        </nav>
-        <div class="account">
-            <% if (acct) { %>
-                <span><%= acct.substring(0, 6) %>...<%= acct.substring(acct.length - 4) %></span>
-            <% } else { %>
-                <span>Not connected</span>
-            <% } %>
-        </div>
-    </header>
+    <%- include('partials/navbar') %>
 
     <main class="container">
         <div class="card">

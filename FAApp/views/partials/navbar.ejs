@@ -1,10 +1,10 @@
 <header class="header" style="background: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
     <a href="/" class="logo" style="font-size: 24px; font-weight: bold; color: #000; text-decoration: none;">LegitLah</a>
-    <nav class="nav-links" style="display: flex; gap: 24px;">
+    <nav class="nav-links" style="display: flex; gap: 24px; align-items: center;">
         <% if (isLoggedIn) { %>
             <a href="/buyerorders" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'">My Orders</a>
-            <a href="#" onclick="openBuyModal()" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s; cursor: pointer;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'">Buy</a>
-            <a href="/cart" class="cart-icon" style="font-size: 24px; color: #666; transition: color 0.3s; text-decoration: none;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'" title="Cart">🛒</a>
+            <a href="/products" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'">Products</a>
+            <a href="/cart" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'" title="Cart">🛒 My Cart</a>
             <a href="#" onclick="logout()" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s; cursor: pointer;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'">Logout</a>
         <% } else { %>
             <a href="/login" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'">Login</a>

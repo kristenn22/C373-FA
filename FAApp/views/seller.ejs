@@ -169,6 +169,16 @@
 			</div>
 			<div class="row" style="margin-top: 15px;">
 				<div>
+					<label>Buyer Name</label>
+					<div id="modalBuyerName" style="padding: 10px; background: #f3f4f6; border-radius: 6px;">-</div>
+				</div>
+				<div>
+					<label>Delivery Address</label>
+					<div id="modalDeliveryAddress" style="padding: 10px; background: #f3f4f6; border-radius: 6px; word-break: break-word;">-</div>
+				</div>
+			</div>
+			<div class="row" style="margin-top: 15px;">
+				<div>
 					<label>Buyer Address</label>
 					<div id="modalBuyerAddress" class="mono" style="padding: 10px; background: #f3f4f6; border-radius: 6px; font-size: 12px; word-break: break-all;">-</div>
 				</div>
@@ -330,8 +340,23 @@
 				document.getElementById('modalOrderStatus').innerHTML = `<span class="${statusClass}">${statusText}</span>`;
 				document.getElementById('modalProductName').textContent = order.productName;
 				document.getElementById('modalProductPrice').textContent = priceInETH + ' ETH';
+				document.getElementById('modalBuyerName').textContent = order.buyerName || '-';
+				document.getElementById('modalDeliveryAddress').textContent = order.deliveryAddress || '-';
 				document.getElementById('modalBuyerAddress').textContent = order.buyer;
-				document.getElementById('modalPaidStatus').textContent = paidStatus;
+				
+				const paidStatusEl = document.getElementById('modalPaidStatus');
+				if (order.isPaid) {
+					paidStatusEl.textContent = '✓ Yes - Paid';
+					paidStatusEl.style.background = '#d1fae5';
+					paidStatusEl.style.color = '#065f46';
+					paidStatusEl.style.fontWeight = '600';
+				} else {
+					paidStatusEl.textContent = '✗ No - Unpaid';
+					paidStatusEl.style.background = '#fee2e2';
+					paidStatusEl.style.color = '#991b1b';
+					paidStatusEl.style.fontWeight = '600';
+				}
+				
 				document.getElementById('modalMessage').innerHTML = '';
 
 				document.getElementById('orderModal').classList.add('show');

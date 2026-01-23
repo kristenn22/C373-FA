@@ -182,6 +182,23 @@
             font-size: 14px;
         }
 
+        #paymentStatus {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        #paymentStatus.paid {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        #paymentStatus.unpaid {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
         .tracking-history {
             margin-top: 30px;
         }
@@ -414,7 +431,15 @@
                 document.getElementById('deliveryAddress').textContent = order.deliveryAddress || '-';
                 document.getElementById('orderAmount').textContent = '$' + (order.totalAmount || '0');
                 document.getElementById('orderStatus').textContent = statusMap[order.status];
-                document.getElementById('paymentStatus').textContent = order.isPaid ? 'Paid' : 'Unpaid';
+                
+                const paymentStatusEl = document.getElementById('paymentStatus');
+                if (order.isPaid) {
+                    paymentStatusEl.textContent = 'Paid';
+                    paymentStatusEl.className = 'paid';
+                } else {
+                    paymentStatusEl.textContent = 'Unpaid';
+                    paymentStatusEl.className = 'unpaid';
+                }
                 
                 const orderDate = new Date(Number(order.timestamp) * 1000);
                 document.getElementById('orderDate').textContent = orderDate.toLocaleDateString();
@@ -425,30 +450,28 @@
                 // Load tracking history
                 loadTrackingHistory(tracking);
                 
-                // Show confirm button only for buyer and if item has been marked as delivered
-                const confirmBtn = document.getElementById('confirmBtn');
-                const confirmBtnStatus = document.getElementById('confirmBtnStatus');
                 const orderStatus = Number(order.status);
                 
+                // Show confirm button only when seller marks as Delivered (status = 3)
+                const confirmBtn = document.getElementById('confirmBtn');
+                const confirmBtnStatus = document.getElementById('confirmBtnStatus');
+                
                 if (userAccount && userAccount.toLowerCase() === order.buyer.toLowerCase()) {
-                    confirmBtn.style.display = 'block';
-                    
-                    if (orderStatus < 3) {
-                        // Item not yet marked as delivered - disable button
-                        confirmBtn.disabled = true;
-                        confirmBtn.style.opacity = '0.5';
-                        confirmBtn.style.cursor = 'not-allowed';
-                        confirmBtnStatus.style.display = 'block';
+                    if (orderStatus === 3) {
+                        // Item marked as delivered - show confirm button
+                        confirmBtn.style.display = 'block';
+                        confirmBtn.disabled = false;
+                        confirmBtn.style.opacity = '1';
+                        confirmBtn.style.cursor = 'pointer';
+                        confirmBtnStatus.style.display = 'none';
                     } else if (orderStatus >= 4) {
                         // Already confirmed - hide button
                         confirmBtn.style.display = 'none';
                         confirmBtnStatus.style.display = 'none';
                     } else {
-                        // Item marked as delivered - enable button
-                        confirmBtn.disabled = false;
-                        confirmBtn.style.opacity = '1';
-                        confirmBtn.style.cursor = 'pointer';
-                        confirmBtnStatus.style.display = 'none';
+                        // Waiting for seller to mark as delivered
+                        confirmBtn.style.display = 'none';
+                        confirmBtnStatus.style.display = 'block';
                     }
                 } else {
                     confirmBtn.style.display = 'none';

@@ -58,7 +58,9 @@ contract OrderContract {
         uint _price,
         string memory _imageUrl,
         string memory _description
-    ) public returns (uint) {
+    ) public payable returns (uint) {
+        require(msg.value >= _price, "Insufficient payment for order");
+        
         orderCount++;
         
         Product memory newProduct = Product({
@@ -87,15 +89,16 @@ contract OrderContract {
         // Add initial tracking
         trackingHistory[orderCount].push(TrackingUpdate({
             status: "Order Created",
-            description: "Your order has been created",
+            description: "Your order has been created and is pending",
             timestamp: block.timestamp
         }));
         
         emit OrderCreated(orderCount, msg.sender, _price);
+        emit OrderPaid(orderCount, msg.sender, msg.value);
         return orderCount;
     }
 
-    // Pay for order
+    // Pay for order (kept for backward compatibility)
     function payForOrder(uint _orderId) public payable {
         require(_orderId > 0 && _orderId <= orderCount, "Invalid order ID");
         Order storage order = orders[_orderId];
@@ -152,6 +155,7 @@ contract OrderContract {
         
         if (_received) {
             order.status = OrderStatus.Confirmed;
+            order.isPaid = true;
             
             trackingHistory[_orderId].push(TrackingUpdate({
                 status: "Confirmed",
@@ -160,12 +164,13 @@ contract OrderContract {
             }));
 
             // Release payment to seller only after buyer confirms delivery
-            if (order.isPaid && !order.isReleased && order.totalAmount > 0) {
+            if (!order.isReleased && order.totalAmount > 0) {
                 order.isReleased = true;
                 (bool success, ) = order.seller.call{value: order.totalAmount}("");
                 require(success, "Payment release failed");
             }
             
+            emit OrderPaid(_orderId, msg.sender, order.totalAmount);
             emit DeliveryConfirmed(_orderId, msg.sender);
         } else {
             trackingHistory[_orderId].push(TrackingUpdate({
@@ -182,6 +187,7 @@ contract OrderContract {
         address buyer,
         address seller,
         string memory buyerName,
+        string memory deliveryAddress,
         string memory productName,
         uint price,
         string memory imageUrl,
@@ -199,6 +205,7 @@ contract OrderContract {
             order.buyer,
             order.seller,
             order.buyerName,
+            order.deliveryAddress,
             order.product.name,
             order.product.price,
             order.product.imageUrl,

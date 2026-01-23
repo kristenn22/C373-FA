@@ -165,16 +165,7 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">LegiLah</div>
-        <div>
-            <% if (!loading && acct) { %>
-                <span class="account-info">Connected: <%= acct.substring(0, 6) %>...<%=acct.substring(38) %></span>
-            <% } else { %>
-                <button class="connect-button" onclick="connectMetaMask()">Connect MetaMask</button>
-            <% } %>
-        </div>
-    </div>
+    <%- include('partials/navbar') %>
 
     <div class="container">
         <h1>Order Summary</h1>
