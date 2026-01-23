@@ -315,12 +315,12 @@
                 
                 <div class="details-item">
                     <span class="details-label">Product:</span>
-                    <span class="details-value" id="productName"><%= product.name %></span>
+                    <span class="details-value" id="productName">Loading...</span>
                 </div>
                 
                 <div class="details-item">
                     <span class="details-label">Amount:</span>
-                    <span class="details-value" id="orderAmount">$<%= product.price %></span>
+                    <span class="details-value" id="orderAmount">$0</span>
                 </div>
                 
                 <div class="details-item">
@@ -397,9 +397,9 @@
                 const order = await contract.methods.getOrder(orderId).call();
                 const tracking = await contract.methods.getTrackingHistory(orderId).call();
                 
-                // Update order details
-                document.getElementById('productName').textContent = order.productName;
-                document.getElementById('orderAmount').textContent = '$' + web3.utils.fromWei(order.totalAmount, 'ether');
+                // Update order details from contract
+                document.getElementById('productName').textContent = order.productName || 'Product';
+                document.getElementById('orderAmount').textContent = '$' + (order.totalAmount || '0');
                 document.getElementById('orderStatus').textContent = statusMap[order.status];
                 document.getElementById('paymentStatus').textContent = order.isPaid ? 'Paid' : 'Unpaid';
                 

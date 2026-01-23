@@ -6,10 +6,12 @@ contract OrderContract {
     
     string public companyName;
     uint public orderCount;
+    address payable public owner;
 
     constructor() {
         orderCount = 0;
         companyName = "LegiLah";
+        owner = payable(msg.sender);
     }
 
     struct Product {
@@ -22,12 +24,14 @@ contract OrderContract {
     struct Order {
         uint orderId;
         address payable buyer;
+        address payable seller;
         string buyerName;
         Product product;
         uint totalAmount;
         OrderStatus status;
         uint timestamp;
         bool isPaid;
+        bool isReleased;
     }
 
     struct TrackingUpdate {
@@ -65,12 +69,14 @@ contract OrderContract {
         orders[orderCount] = Order({
             orderId: orderCount,
             buyer: payable(msg.sender),
+            seller: owner,
             buyerName: _buyerName,
             product: newProduct,
             totalAmount: _price,
             status: OrderStatus.Pending,
             timestamp: block.timestamp,
-            isPaid: false
+            isPaid: false,
+            isReleased: false
         });
         
         userOrders[msg.sender].push(orderCount);
@@ -149,6 +155,13 @@ contract OrderContract {
                 description: "Delivery confirmed by customer",
                 timestamp: block.timestamp
             }));
+
+            // Release payment to seller only after buyer confirms delivery
+            if (order.isPaid && !order.isReleased && order.totalAmount > 0) {
+                order.isReleased = true;
+                (bool success, ) = order.seller.call{value: order.totalAmount}("");
+                require(success, "Payment release failed");
+            }
             
             emit DeliveryConfirmed(_orderId, msg.sender);
         } else {
@@ -164,6 +177,7 @@ contract OrderContract {
     function getOrder(uint _orderId) public view returns (
         uint orderId,
         address buyer,
+        address seller,
         string memory buyerName,
         string memory productName,
         uint price,
@@ -171,7 +185,8 @@ contract OrderContract {
         uint totalAmount,
         OrderStatus status,
         uint timestamp,
-        bool isPaid
+        bool isPaid,
+        bool isReleased
     ) {
         require(_orderId > 0 && _orderId <= orderCount, "Invalid order ID");
         Order memory order = orders[_orderId];
@@ -179,6 +194,7 @@ contract OrderContract {
         return (
             order.orderId,
             order.buyer,
+            order.seller,
             order.buyerName,
             order.product.name,
             order.product.price,
@@ -186,7 +202,8 @@ contract OrderContract {
             order.totalAmount,
             order.status,
             order.timestamp,
-            order.isPaid
+            order.isPaid,
+            order.isReleased
         );
     }
 

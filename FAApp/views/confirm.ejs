@@ -231,7 +231,7 @@
                 </div>
                 <div class="order-info-item">
                     <span class="order-info-label">Product:</span>
-                    <span class="order-info-value" id="productName"><%= product.name %></span>
+                    <span class="order-info-value" id="productName">Loading...</span>
                 </div>
                 <div class="order-info-item">
                     <span class="order-info-label">Status:</span>
@@ -240,7 +240,7 @@
             </div>
 
             <div class="question">Did you receive the item?</div>
-            <div class="product-name"><%= product.name %></div>
+            <div class="product-name" id="productDetails">Loading product details...</div>
 
             <div class="button-group">
                 <button class="confirm-button button-received" id="receivedBtn" onclick="confirmDelivery(true)">
@@ -301,7 +301,7 @@
         async function loadOrderData() {
             try {
                 const order = await contract.methods.getOrder(orderId).call();
-                document.getElementById('productName').textContent = order.productName;
+                document.getElementById('productName').textContent = order.productName || 'Product';
                 document.getElementById('orderStatus').textContent = statusMap[order.status];
 
                 // Disable buttons if already confirmed or if status is not Delivered

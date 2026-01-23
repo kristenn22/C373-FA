@@ -187,21 +187,21 @@
             </div>
         <% } else { %>
             <div class="product-card">
-                <img src="<%= product.imageUrl %>" alt="<%= product.name %>" class="product-image" onerror="this.style.display='none'">
                 <div class="product-info">
-                    <div class="product-name"><%= product.name %></div>
-                    <div class="product-price">$<%= product.price %></div>
+                    <div class="product-name" id="productName">Sample Product</div>
+                    <div class="product-price" id="productPrice">$150</div>
                     <div class="product-details">
                         <div class="detail-item">✓ Comes with official box</div>
-                        <div class="detail-item">✓ Grade A+++ without box</div>
                         <div class="detail-item">✓ Order status live</div>
-                        <div class="detail-item">✓ Payment upon delivery available</div>
                         <div class="detail-item">✓ Payment auto release</div>
                     </div>
                 </div>
             </div>
 
-            <button class="buy-button" onclick="buyProduct()" id="buyButton">Buy</button>
+            <div style="display: flex; gap: 15px;">
+                <button class="buy-button" onclick="addToCart()" id="cartButton" style="flex: 1;">Add to Cart</button>
+                <button class="buy-button" onclick="viewCart()" id="viewButton" style="flex: 1; background: #059669;">View Cart</button>
+            </div>
         <% } %>
     </div>
 
@@ -281,6 +281,54 @@
             }
         }
 
+        async function addToCart() {
+            const cartButton = document.getElementById('cartButton');
+            cartButton.disabled = true;
+            cartButton.textContent = 'Adding...';
+
+            try {
+                if (!userAccount) {
+                    showMessage('Please connect MetaMask first!', 'error');
+                    cartButton.disabled = false;
+                    cartButton.textContent = 'Add to Cart';
+                    return;
+                }
+
+                const response = await fetch('/addToCart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        productName: "Sample Product",
+                        price: "150",
+                        userAccount: userAccount
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('Product added to cart! Items in cart: ' + result.cartCount, 'success');
+                    setTimeout(() => {
+                        cartButton.disabled = false;
+                        cartButton.textContent = 'Add to Cart';
+                    }, 1500);
+                } else {
+                    showMessage('Failed to add to cart: ' + result.message, 'error');
+                    cartButton.disabled = false;
+                    cartButton.textContent = 'Add to Cart';
+                }
+            } catch (error) {
+                console.error('Error adding to cart:', error);
+                showMessage('Error: ' + error.message, 'error');
+                cartButton.disabled = false;
+                cartButton.textContent = 'Add to Cart';
+            }
+        }
+
+        function viewCart() {
+            window.location.href = '/cart';
+        }
+
         async function buyProduct() {
             const buyButton = document.getElementById('buyButton');
             buyButton.disabled = true;
@@ -296,12 +344,12 @@
 
                 showMessage('Creating order on blockchain using Ganache...', 'info');
 
-                const productName = "<%= product.name %>";
-                const productPriceUSD = "<%= product.price %>";
+                const productName = "Sample Product";
+                const productPriceUSD = "150";
                 // Use 0.1 ETH as payment (price is in USD, not ETH)
                 const paymentETH = web3.utils.toWei('0.1', 'ether');
-                const imageUrl = "<%= product.imageUrl %>";
-                const description = "<%= product.description %>";
+                const imageUrl = "";
+                const description = "Product from LegiLah store";
 
                 // Create order on blockchain
                 const createResult = await contract.methods.createOrder(

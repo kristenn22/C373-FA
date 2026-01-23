@@ -1,0 +1,74 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">FreshAir App</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <% if (isLoggedIn) { %>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/cart">🛒 Cart</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/orderdetails">📦 Order Details</a>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link btn btn-link" onclick="logout()">🚪 Logout</button>
+                    </li>
+                <% } else { %>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/register">Register</a>
+                    </li>
+                <% } %>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<script>
+function logout() {
+    fetch('/logout', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Logged out successfully');
+            window.location.href = '/';
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+
+<style>
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.nav-link {
+    margin-left: 15px;
+    margin-right: 15px;
+}
+
+.nav-link.btn-link {
+    border: none;
+    background: none;
+    color: #adb5bd !important;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 0.5rem 0;
+}
+
+.nav-link.btn-link:hover {
+    color: #fff !important;
+}
+</style>
