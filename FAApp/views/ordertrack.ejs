@@ -148,7 +148,7 @@
             <button class="details-button" onclick="viewDetails()">Details</button>
 
             <div class="nav-links">
-                <a href="/buy" class="nav-link">← Back to Shop</a>
+                <a href="/buyerorders" class="nav-link">← Back to Order History</a>
             </div>
         <% } %>
     </div>
@@ -158,9 +158,20 @@
         let web3;
         let contract;
         let userAccount;
-        let orderId = Number(<%= orderId %> || 0);
+        
+        // Get orderId from URL query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlOrderId = urlParams.get('orderId');
+        const serverOrderId = <%= orderId || 0 %>;
+        let orderId = urlOrderId ? Number(urlOrderId) : (serverOrderId ? Number(serverOrderId) : 0);
+        
         const contractABI = <%- contractABI %>;
         const contractData = <%- contractData %>;
+
+        console.log('=== ORDER TRACKER PAGE ===');
+        console.log('URL orderId:', urlOrderId);
+        console.log('Server orderId:', serverOrderId);
+        console.log('Final orderId:', orderId);
 
         const statusMap = {
             '0': 'Pending',
@@ -175,21 +186,31 @@
                 web3 = new Web3('http://127.0.0.1:7545');
                 const accounts = await web3.eth.getAccounts();
                 userAccount = accounts[0];
+                console.log('Using account:', userAccount);
+                
                 const networkId = 5777;
                 const deployedNetwork = contractData.networks[networkId];
                 
                 if (deployedNetwork) {
                     contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
+                    console.log('Contract loaded:', deployedNetwork.address);
 
                     // If no orderId was provided, fall back to latest order
                     if (!orderId || orderId <= 0) {
                         const count = await contract.methods.getOrderCount().call();
-                        if (count > 0) {
-                            orderId = Number(count);
+                        const countNum = Number(count);
+                        console.log('Total orders on chain:', countNum);
+                        
+                        if (countNum > 0) {
+                            orderId = countNum;
+                            console.log('Using latest order ID:', orderId);
                         } else {
-                            document.getElementById('orderProduct').textContent = 'No orders yet';
+                            document.getElementById('orderProduct').textContent = 'No orders yet. Complete a purchase first!';
                             document.getElementById('orderPrice').textContent = '$0';
                             document.getElementById('orderStatus').textContent = '';
+                            document.querySelector('.details-button').disabled = true;
+                            document.querySelector('.details-button').style.background = '#ccc';
+                            document.querySelector('.details-button').style.cursor = 'not-allowed';
                             return;
                         }
                     }
@@ -197,30 +218,83 @@
                     await loadOrderData();
                 } else {
                     console.error('Contract not deployed on Ganache network 5777');
+                    document.getElementById('orderProduct').textContent = 'Contract not found on network';
+                    document.getElementById('orderPrice').textContent = '$0';
                 }
             } catch (error) {
                 console.error('Error initializing Web3:', error);
+                document.getElementById('orderProduct').textContent = 'Error connecting to blockchain';
+                document.getElementById('orderPrice').textContent = '$0';
             }
         }
 
         async function loadOrderData() {
             try {
+                console.log('Loading order data for orderId:', orderId);
                 const order = await contract.methods.getOrder(orderId).call();
-                document.getElementById('orderProduct').textContent = order.productName || 'Product';
-                document.getElementById('orderPrice').textContent = '$' + (order.totalAmount || '0');
-                document.getElementById('orderStatus').textContent = 'Status: ' + statusMap[order.status];
+                console.log('=== FULL ORDER RESPONSE ===');
+                console.log('Order keys:', Object.keys(order));
+                console.log('orderId:', order.orderId);
+                console.log('buyer:', order.buyer);
+                console.log('seller:', order.seller);
+                console.log('buyerName:', order.buyerName);
+                console.log('totalAmount:', order.totalAmount);
+                console.log('status:', order.status);
+                console.log('product type:', typeof order.product);
+                if (order.product) {
+                    console.log('product keys:', Object.keys(order.product));
+                    console.log('product.name:', order.product.name);
+                    console.log('product.price:', order.product.price);
+                }
+                console.log('===========================');
+                
+                // Try different property paths
+                let productName = 'Product';
+                let totalAmount = '0';
+                let status = '0';
+                
+                if (order.product && order.product.name) {
+                    productName = order.product.name;
+                    console.log('✓ Got product name from order.product.name:', productName);
+                } else if (order.productName) {
+                    productName = order.productName;
+                    console.log('✓ Got product name from order.productName:', productName);
+                } else {
+                    console.warn('Could not find product name in order');
+                }
+                
+                if (order.totalAmount) {
+                    totalAmount = String(order.totalAmount); // Convert BigInt to string
+                    console.log('✓ Got totalAmount:', totalAmount);
+                }
+                
+                if (order.status !== undefined) {
+                    status = String(order.status);
+                    console.log('✓ Got status:', status);
+                }
+                
+                console.log('Displaying:', { productName, totalAmount, status });
+                document.getElementById('orderProduct').textContent = productName;
+                document.getElementById('orderPrice').textContent = '$' + totalAmount;
+                document.getElementById('orderStatus').textContent = 'Status: ' + statusMap[status];
             } catch (error) {
                 console.error('Error loading order:', error);
-                document.getElementById('orderProduct').textContent = 'Error loading product';
+                document.getElementById('orderProduct').textContent = 'Error loading order #' + orderId;
                 document.getElementById('orderPrice').textContent = '$0';
             }
         }
 
         function viewDetails() {
+            if (!orderId || orderId <= 0) {
+                alert('No order to view. Please complete a purchase first.');
+                return;
+            }
+            console.log('Navigating to order details for orderId:', orderId);
             window.location.href = '/orderdetails?orderId=' + orderId;
         }
 
         window.addEventListener('load', initWeb3);
+        console.log('=========================');
     </script>
 </body>
 </html>

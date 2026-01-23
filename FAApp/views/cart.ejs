@@ -210,11 +210,8 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">LegiLah</div>
-        <div class="account-info">Account: <%= acct.slice(0, 10) %>...</div>
-    </div>
-
+    <%- include('partials/navbar') %>
+    
     <div class="container">
         <div class="nav-links">
             <a href="/" class="nav-link">Home</a>
@@ -237,11 +234,15 @@
         const contractData = <%- contractData %>;
         const contractABI = <%- contractABI %>;
         let userAccount = '<%= acct %>';
+        
+        console.log('Cart page - userAccount:', userAccount);
 
         async function loadCart() {
             try {
+                console.log('Loading cart for account:', userAccount);
                 const response = await fetch('/getCart?account=' + userAccount);
                 const result = await response.json();
+                console.log('Cart result:', result);
 
                 const container = document.getElementById('cartContainer');
 
@@ -296,8 +297,34 @@
         }
 
         function removeFromCart(itemId) {
-            showMessage('Remove functionality coming soon', 'info');
-            // This would require storing item IDs and managing cart removal
+            console.log('Removing item:', itemId, 'for account:', userAccount);
+            
+            if (!confirm('Are you sure you want to remove this item?')) {
+                return;
+            }
+
+            fetch('/removeFromCart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    itemId: itemId,
+                    userAccount: userAccount
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log('Remove result:', result);
+                if (result.success) {
+                    showMessage('Item removed from cart', 'success');
+                    loadCart(); // Reload cart to show updated items
+                } else {
+                    showMessage('Failed to remove item: ' + result.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error removing item:', error);
+                showMessage('Error removing item: ' + error.message, 'error');
+            });
         }
 
         function proceedToCheckout() {

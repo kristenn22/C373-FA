@@ -198,11 +198,8 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">LegiLah</div>
-        <div class="account-info">Account: <%= acct.slice(0, 10) %>...</div>
-    </div>
-
+    <%- include('partials/navbar') %>
+    
     <div class="container">
         <h1>Checkout</h1>
         <div id="statusMessage"></div>
@@ -250,28 +247,28 @@
 
         async function initWeb3() {
             try {
-                // Prefer injected provider if available
-                if (window.ethereum) {
-                    web3 = new Web3(window.ethereum);
-                    // Ensure account access
-                    try {
-                        await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    } catch (reqErr) {
-                        console.warn('User denied account access:', reqErr);
-                    }
-                } else {
-                    web3 = new Web3('http://127.0.0.1:7545');
-                }
+                console.log('Initializing Web3...');
+                // Always use Ganache HTTP connection for transactions
+                web3 = new Web3('http://127.0.0.1:7545');
 
+                // Get accounts from Ganache
                 const accounts = await web3.eth.getAccounts();
+                console.log('Available accounts:', accounts);
+                
                 if (accounts && accounts.length > 0) {
                     userAccount = accounts[0];
+                    console.log('Using account for transactions:', userAccount);
+                } else {
+                    console.error('No accounts available from Ganache');
+                    userAccount = '<%= acct %>'; // Fallback to server account
+                    console.log('Fallback to server account:', userAccount);
                 }
 
                 const networkId = 5777;
                 const deployedNetwork = contractData.networks[networkId];
                 if (deployedNetwork) {
                     contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
+                    console.log('Contract initialized:', deployedNetwork.address);
                 }
             } catch (err) {
                 console.error('Web3 init failed:', err);
@@ -280,8 +277,10 @@
 
         async function loadOrderSummary() {
             try {
+                console.log('Fetching cart for account:', userAccount);
                 const response = await fetch('/getCart?account=' + userAccount);
                 const result = await response.json();
+                console.log('Cart response:', result);
 
                 if (!result.success || result.items.length === 0) {
                     showMessage('Your cart is empty. Please add items before checking out.', 'error');
@@ -352,6 +351,16 @@
                 }
 
                 let createdOrderId = null;
+                console.log('=== CREATING ORDER ===');
+                console.log('Contract exists:', !!contract);
+                console.log('Order total:', orderTotal);
+                console.log('User account:', userAccount);
+                
+                if (!contract) {
+                    console.log('Contract not initialized, initializing now...');
+                    await initWeb3();
+                }
+                
                 if (contract && orderTotal > 0) {
                     // Create on-chain order (uses first cart item name and total as price)
                     const productName = cartItems[0]?.productName || 'Order';
@@ -359,13 +368,28 @@
                     const imageUrl = '';
                     const description = '';
                     try {
-                        await contract.methods.createOrder(fullName, productName, price, imageUrl, description)
-                            .send({ from: userAccount, gas: 500000 });
-                        createdOrderId = await contract.methods.getOrderCount().call();
+                        console.log('Creating on-chain order with:', { fullName, address, productName, price, userAccount });
+                        console.log('Sending to contract...');
+                        
+                        const createTx = await contract.methods.createOrder(fullName, address, productName, price, imageUrl, description)
+                            .send({ from: userAccount, gas: 1000000 });
+                        console.log('✓ Order created successfully!');
+                        console.log('Transaction receipt:', createTx);
+                        
+                        // Get the order count and use it as the new order ID
+                        console.log('Fetching order count...');
+                        const countResult = await contract.methods.getOrderCount().call();
+                        createdOrderId = Number(countResult);
+                        console.log('✓ New order ID:', createdOrderId);
+                        console.log('=====================');
                     } catch (chainErr) {
-                        console.error('On-chain order creation failed:', chainErr);
-                        showMessage('On-chain order creation failed. We will still finalize checkout.', 'info');
+                        console.error('✗ On-chain order creation FAILED:');
+                        console.error('Error message:', chainErr.message);
+                        console.error('Full error:', chainErr);
+                        showMessage('Order creation failed: ' + chainErr.message, 'error');
                     }
+                } else {
+                    console.warn('Skipping on-chain order - contract:', !!contract, 'total:', orderTotal);
                 }
 
                 const response = await fetch('/processCheckout', {
@@ -383,12 +407,18 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    console.log('✓ Checkout successful!');
+                    console.log('Created order ID:', createdOrderId);
                     showMessage('Order placed successfully! Redirecting...', 'success');
                     const targetOrderId = createdOrderId || ''; 
+                    console.log('Target redirect orderId:', targetOrderId);
+                    const redirectUrl = targetOrderId ? '/ordertrack?orderId=' + targetOrderId : '/ordertrack';
+                    console.log('Redirecting to:', redirectUrl);
                     setTimeout(() => {
-                        window.location.href = targetOrderId ? '/ordertrack?orderId=' + targetOrderId : '/ordertrack';
+                        window.location.href = redirectUrl;
                     }, 2000);
                 } else {
+                    console.error('✗ Checkout failed:', result.message);
                     showMessage('Checkout failed: ' + result.message, 'error');
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Complete Purchase';

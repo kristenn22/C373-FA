@@ -26,6 +26,7 @@ contract OrderContract {
         address payable buyer;
         address payable seller;
         string buyerName;
+        string deliveryAddress;
         Product product;
         uint totalAmount;
         OrderStatus status;
@@ -52,6 +53,7 @@ contract OrderContract {
     // Create a new order
     function createOrder(
         string memory _buyerName,
+        string memory _deliveryAddress,
         string memory _productName,
         uint _price,
         string memory _imageUrl,
@@ -71,6 +73,7 @@ contract OrderContract {
             buyer: payable(msg.sender),
             seller: owner,
             buyerName: _buyerName,
+            deliveryAddress: _deliveryAddress,
             product: newProduct,
             totalAmount: _price,
             status: OrderStatus.Pending,

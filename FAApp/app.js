@@ -140,9 +140,14 @@ app.get('/', async(req, res) => {
         res.status(500).send('Server error');
     }
 });
-// Get started - redirect based on sign-in status
-app.get('/get-started', (req, res) => {
-    res.redirect(isSignedIn() ? '/buy' : '/signup');
+// Register page
+app.get('/register', (req, res) => {
+    try {
+        res.render('register', getCommonData(req));
+    } catch (error) {
+        console.error('Error in register route:', error);
+        res.status(500).send('Server error');
+    }
 });
 
 // Login page
@@ -162,7 +167,20 @@ app.get('/login', async(req, res) => {
 // Handle login form submission
 app.post('/login', (req, res) => {
     try {
-        res.redirect('/products');
+        const { acct } = req.body;
+        
+        // Set the account from frontend if provided
+        if (acct && acct.trim() !== '') {
+            account = acct;
+            loggedInUsers[account] = true;
+            res.json({ success: true, message: 'Logged in successfully', isLoggedIn: true });
+        } else if (account && account.trim() !== '') {
+            // Use existing account if no account provided
+            loggedInUsers[account] = true;
+            res.json({ success: true, message: 'Logged in successfully', isLoggedIn: true });
+        } else {
+            res.status(401).json({ success: false, message: 'No account connected. Please use MetaMask login.' });
+        }
     } catch (error) {
         console.error('Error in login post route:', error);
         res.status(500).send('Server error');
@@ -239,9 +257,10 @@ app.post('/logout', express.json(), async(req, res) => {
 // Product page
 app.get('/products', async(req, res) => {
     try {
+        const data = getCommonData(req);
         res.render('products', {
-            acct: account,
-            loading: loading
+            ...data,
+            petId: 0
         });
     } catch (error) {
         console.error('Error in products route:', error);
@@ -311,6 +330,51 @@ app.get('/orderdetails', async(req, res) => {
         });
     } catch (error) {
         console.error('Error in orderdetails route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+app.get('/orderhistory', async(req, res) => {
+    const data = getCommonData(req);
+    
+    try {
+        res.render('orderhistory', {
+            ...data,
+            contractABI: JSON.stringify(OrderContract.abi),
+            contractData: JSON.stringify(OrderContract)
+        });
+    } catch (error) {
+        console.error('Error in orderhistory route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+app.get('/buyerorders', async(req, res) => {
+    const data = getCommonData(req);
+    
+    try {
+        res.render('buyerorders', {
+            ...data,
+            contractABI: JSON.stringify(OrderContract.abi),
+            contractData: JSON.stringify(OrderContract)
+        });
+    } catch (error) {
+        console.error('Error in buyerorders route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+app.get('/sellerorders', async(req, res) => {
+    const data = getCommonData(req);
+    
+    try {
+        res.render('sellerorders', {
+            ...data,
+            contractABI: JSON.stringify(OrderContract.abi),
+            contractData: JSON.stringify(OrderContract)
+        });
+    } catch (error) {
+        console.error('Error in sellerorders route:', error);
         res.status(500).send('Server error');
     }
 });
@@ -424,6 +488,10 @@ app.post('/addToCart', express.json(), async (req, res) => {
     try {
         const { productName, price, userAccount } = req.body;
         
+        console.log('=== ADD TO CART DEBUG ===');
+        console.log('Adding for account:', userAccount);
+        console.log('Product:', productName, 'Price:', price);
+        
         // Initialize cart for user if not exists
         if (!userCart[userAccount]) {
             userCart[userAccount] = [];
@@ -438,7 +506,9 @@ app.post('/addToCart', express.json(), async (req, res) => {
         };
         userCart[userAccount].push(cartItem);
         
-        console.log('Item added to cart:', cartItem);
+        console.log('Cart after add:', userCart[userAccount]);
+        console.log('All cart keys:', Object.keys(userCart));
+        console.log('=======================');
         
         res.json({
             success: true,
@@ -475,7 +545,11 @@ app.get('/getCart', express.json(), async (req, res) => {
         const userAccount = req.query.account;
         const cartItems = userCart[userAccount] || [];
         
-        console.log('Cart items for', userAccount, ':', cartItems);
+        console.log('=== GET CART DEBUG ===');
+        console.log('Requested account:', userAccount);
+        console.log('All cart keys:', Object.keys(userCart));
+        console.log('Cart items for this account:', cartItems);
+        console.log('====================');
         
         res.json({
             success: true,
@@ -484,6 +558,37 @@ app.get('/getCart', express.json(), async (req, res) => {
         });
     } catch (error) {
         console.error('Error getting cart:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// Remove from cart
+app.post('/removeFromCart', express.json(), async (req, res) => {
+    try {
+        const { itemId, userAccount } = req.body;
+        
+        if (!userCart[userAccount]) {
+            return res.status(404).json({
+                success: false,
+                message: 'Cart not found'
+            });
+        }
+        
+        // Remove item by id
+        userCart[userAccount] = userCart[userAccount].filter(item => item.id !== itemId);
+        
+        console.log('Item removed from cart. Remaining items:', userCart[userAccount].length);
+        
+        res.json({
+            success: true,
+            message: 'Item removed from cart',
+            cartCount: userCart[userAccount].length
+        });
+    } catch (error) {
+        console.error('Error removing from cart:', error);
         res.status(500).json({
             success: false,
             message: error.message

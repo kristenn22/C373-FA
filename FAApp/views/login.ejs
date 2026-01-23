@@ -298,28 +298,6 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <a href="/" class="logo">LegitLah</a>
-        <nav class="nav-links">
-            <a href="/products" class="nav-link">Products</a>
-            <a href="/ordertrack" class="nav-link">Track Order</a>
-            <a href="/signup" class="nav-link">Sign Up</a>
-        </nav>
-        <div class="wallet-section">
-            <span class="account-btn">
-                <span>🔐</span>
-                <span id="accountStatus">
-                    <% if (acct && !loading) { %>
-                        <%= acct.substring(0, 6) %>...<%= acct.substring(acct.length - 4) %>
-                    <% } else { %>
-                        Connect Wallet
-                    <% } %>
-                </span>
-            </span>
-        </div>
-    </header>
-
     <!-- Login Container -->
     <div class="login-container">
         <h1 class="login-title">Welcome Back</h1>
@@ -379,6 +357,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
     <script>
+        let connectedAccount = null;
+
         // Handle traditional login
         function handleLogin(event) {
             event.preventDefault();
@@ -400,10 +380,33 @@
             // Submit to backend after client-side validation
             const loginBtn = document.querySelector('.btn-login');
             loginBtn.disabled = true;
-            console.log('Login attempt:', { email, rememberMe });
+            console.log('Login attempt:', { email, rememberMe, acct: connectedAccount || 'No MetaMask' });
             
-            showSuccess('Login successful! Redirecting...');
-            event.target.submit();
+            // Send login request to backend with connected account
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password, rememberMe, acct: connectedAccount })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.isLoggedIn) {
+                    showSuccess('Login successful! Redirecting to dashboard...');
+                    setTimeout(() => {
+                        window.location.href = '/user-home';
+                    }, 1500);
+                } else {
+                    showError(data.message || 'Login failed');
+                    loginBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Login error:', error);
+                showError('Login failed: ' + error.message);
+                loginBtn.disabled = false;
+            });
         }
 
         // Connect MetaMask wallet
@@ -424,6 +427,9 @@
 
                 const account = accounts[0];
                 console.log('Connected account:', account);
+                
+                // Store the connected account
+                connectedAccount = account;
 
                 // Load Web3 and contract
                 const web3 = new Web3(window.ethereum);
@@ -456,10 +462,12 @@
                 });
 
                 if (response.ok) {
-                    showSuccess('MetaMask wallet connected! Redirecting...');
-                    setTimeout(() => {
-                        window.location.href = '/products';
-                    }, 1500);
+                    // Update button to show connected status
+                    btn.textContent = '✓ MetaMask Connected';
+                    btn.disabled = false;
+                    btn.style.backgroundColor = '#4CAF50';
+                    
+                    showSuccess('MetaMask wallet connected! You can now sign in.');
                 } else {
                     showError('Failed to connect wallet');
                     btn.disabled = false;

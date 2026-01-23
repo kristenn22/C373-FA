@@ -260,15 +260,8 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">LegiLah</div>
-        <div>
-            <% if (acct) { %>
-                <span class="account-info">Connected: <%= acct.substring(0, 6) %>...<%=acct.substring(38) %></span>
-            <% } %>
-        </div>
-    </div>
-
+    <%- include('partials/navbar') %>
+    
     <div class="container">
         <h1>Order Details</h1>
 
@@ -319,6 +312,16 @@
                 </div>
                 
                 <div class="details-item">
+                    <span class="details-label">Buyer Name:</span>
+                    <span class="details-value" id="buyerName">-</span>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Delivery Address:</span>
+                    <span class="details-value" id="deliveryAddress">-</span>
+                </div>
+                
+                <div class="details-item">
                     <span class="details-label">Amount:</span>
                     <span class="details-value" id="orderAmount">$0</span>
                 </div>
@@ -349,8 +352,16 @@
 
             <!-- Action Buttons -->
             <div class="action-buttons">
+                <div style="flex: 1;">
+                    <button class="button button-primary" id="confirmBtn" onclick="confirmDelivery()" style="display:none; width: 100%;">
+                        Confirm Delivery
+                    </button>
+                    <div id="confirmBtnStatus" style="display:none; margin-top: 10px; padding: 10px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 4px; color: #991b1b; font-size: 14px; text-align: center;">
+                        Waiting for seller to mark as delivered...
+                    </div>
+                </div>
                 <button class="button button-secondary" onclick="goBack()">
-                    Return
+                    Back to Orders
                 </button>
             </div>
         <% } %>
@@ -399,6 +410,8 @@
                 
                 // Update order details from contract
                 document.getElementById('productName').textContent = order.productName || 'Product';
+                document.getElementById('buyerName').textContent = order.buyerName || '-';
+                document.getElementById('deliveryAddress').textContent = order.deliveryAddress || '-';
                 document.getElementById('orderAmount').textContent = '$' + (order.totalAmount || '0');
                 document.getElementById('orderStatus').textContent = statusMap[order.status];
                 document.getElementById('paymentStatus').textContent = order.isPaid ? 'Paid' : 'Unpaid';
@@ -411,6 +424,36 @@
 
                 // Load tracking history
                 loadTrackingHistory(tracking);
+                
+                // Show confirm button only for buyer and if item has been marked as delivered
+                const confirmBtn = document.getElementById('confirmBtn');
+                const confirmBtnStatus = document.getElementById('confirmBtnStatus');
+                const orderStatus = Number(order.status);
+                
+                if (userAccount && userAccount.toLowerCase() === order.buyer.toLowerCase()) {
+                    confirmBtn.style.display = 'block';
+                    
+                    if (orderStatus < 3) {
+                        // Item not yet marked as delivered - disable button
+                        confirmBtn.disabled = true;
+                        confirmBtn.style.opacity = '0.5';
+                        confirmBtn.style.cursor = 'not-allowed';
+                        confirmBtnStatus.style.display = 'block';
+                    } else if (orderStatus >= 4) {
+                        // Already confirmed - hide button
+                        confirmBtn.style.display = 'none';
+                        confirmBtnStatus.style.display = 'none';
+                    } else {
+                        // Item marked as delivered - enable button
+                        confirmBtn.disabled = false;
+                        confirmBtn.style.opacity = '1';
+                        confirmBtn.style.cursor = 'pointer';
+                        confirmBtnStatus.style.display = 'none';
+                    }
+                } else {
+                    confirmBtn.style.display = 'none';
+                    confirmBtnStatus.style.display = 'none';
+                }
                 
             } catch (error) {
                 console.error('Error loading order details:', error);
@@ -466,6 +509,44 @@
 
         function goBack() {
             window.location.href = '/ordertrack?orderId=' + orderId;
+        }
+
+        async function confirmDelivery() {
+            if (!confirm('Confirm that you have received this delivery?')) {
+                return;
+            }
+
+            const confirmBtn = document.getElementById('confirmBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Processing...';
+
+            try {
+                console.log('Calling confirmDelivery for order:', orderId);
+                
+                if (!contract || !userAccount) {
+                    alert('Web3 not initialized. Please refresh the page.');
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Confirm Delivery';
+                    return;
+                }
+
+                // Call the smart contract to confirm delivery
+                const tx = await contract.methods.confirmDelivery(orderId, true)
+                    .send({ from: userAccount, gas: 500000 });
+                
+                console.log('✓ Delivery confirmed! Transaction:', tx);
+                alert('✓ Delivery confirmed! Payment has been released to the seller.');
+                
+                // Reload the page to show updated status
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } catch (error) {
+                console.error('✗ Error confirming delivery:', error);
+                alert('Error confirming delivery: ' + error.message);
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Confirm Delivery';
+            }
         }
 
         window.addEventListener('load', initWeb3);

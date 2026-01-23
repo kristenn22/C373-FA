@@ -328,24 +328,6 @@
     <!-- Header -->
     <header class="header">
         <a href="/" class="logo">LegitLah</a>
-        <nav class="nav-links">
-            <a href="/products" class="nav-link">Products</a>
-            <a href="/ordertrack" class="nav-link">Track Order</a>
-            <a href="/login" class="nav-link">Login</a>
-        </nav>
-        <div class="wallet-section">
-            <% if (acct && !loading) { %>
-                <span class="account-btn">
-                    <span>🔐</span>
-                    <span><%= acct.substring(0, 6) %>...<%= acct.substring(acct.length - 4) %></span>
-                </span>
-            <% } else { %>
-                <span class="account-btn">
-                    <span>⏳</span>
-                    <span>Connect Wallet</span>
-                </span>
-            <% } %>
-        </div>
     </header>
 
     <!-- Register Container -->

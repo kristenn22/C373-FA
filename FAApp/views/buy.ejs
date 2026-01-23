@@ -187,20 +187,22 @@
             </div>
         <% } else { %>
             <div class="product-card">
+                <img src="/images/onepiece.jpg" alt="One Piece The Monsters" class="product-image">
                 <div class="product-info">
-                    <div class="product-name" id="productName">Sample Product</div>
-                    <div class="product-price" id="productPrice">$150</div>
+                    <div class="product-name">One Piece The Monsters</div>
+                    <div class="product-price">$150</div>
                     <div class="product-details">
-                        <div class="detail-item">✓ Comes with official box</div>
-                        <div class="detail-item">✓ Order status live</div>
-                        <div class="detail-item">✓ Payment auto release</div>
+                        <div class="detail-item">Comes with official box</div>
+                        <div class="detail-item">Pay to seller after success</div>
+                        <div class="detail-item">You confirm delivery</div>
+                        <div class="detail-item">Payment auto release</div>
                     </div>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 15px;">
-                <button class="buy-button" onclick="addToCart()" id="cartButton" style="flex: 1;">Add to Cart</button>
-                <button class="buy-button" onclick="viewCart()" id="viewButton" style="flex: 1; background: #059669;">View Cart</button>
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                <button class="buy-button" onclick="addToCart('One Piece The Monsters', 150)" style="flex: 1;">Add to Cart</button>
+                <button class="buy-button" onclick="viewCart()" style="flex: 1; background: #059669;">View Cart</button>
             </div>
         <% } %>
     </div>
@@ -209,9 +211,11 @@
     <script>
         let web3;
         let contract;
-        let userAccount;
+        let userAccount = '<%= acct %>'; // Use account from server
         const contractABI = <%- contractABI %>;
         const contractData = <%- contractData %>;
+        
+        console.log('Buy page - Initial account:', userAccount);
         
         // Initialize Web3 with Ganache on page load
         window.addEventListener('load', async () => {
@@ -226,13 +230,7 @@
                     if (deployedNetwork && deployedNetwork.address) {
                         contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
                         console.log('Contract initialized:', deployedNetwork.address);
-                        
-                        // Get first Ganache account
-                        const accounts = await web3.eth.getAccounts();
-                        if (accounts && accounts.length > 0) {
-                            userAccount = accounts[0];
-                            console.log('Using account:', userAccount);
-                        }
+                        console.log('Using account for cart operations:', userAccount);
                     } else {
                         showMessage('Contract not deployed to Ganache network 5777', 'error');
                     }
@@ -281,16 +279,10 @@
             }
         }
 
-        async function addToCart() {
-            const cartButton = document.getElementById('cartButton');
-            cartButton.disabled = true;
-            cartButton.textContent = 'Adding...';
-
+        async function addToCart(productName, price) {
             try {
                 if (!userAccount) {
                     showMessage('Please connect MetaMask first!', 'error');
-                    cartButton.disabled = false;
-                    cartButton.textContent = 'Add to Cart';
                     return;
                 }
 
@@ -298,8 +290,8 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        productName: "Sample Product",
-                        price: "150",
+                        productName: productName,
+                        price: price.toString(),
                         userAccount: userAccount
                     })
                 });
@@ -307,21 +299,13 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    showMessage('Product added to cart! Items in cart: ' + result.cartCount, 'success');
-                    setTimeout(() => {
-                        cartButton.disabled = false;
-                        cartButton.textContent = 'Add to Cart';
-                    }, 1500);
+                    showMessage(productName + ' added to cart! Total items: ' + result.cartCount, 'success');
                 } else {
                     showMessage('Failed to add to cart: ' + result.message, 'error');
-                    cartButton.disabled = false;
-                    cartButton.textContent = 'Add to Cart';
                 }
             } catch (error) {
                 console.error('Error adding to cart:', error);
                 showMessage('Error: ' + error.message, 'error');
-                cartButton.disabled = false;
-                cartButton.textContent = 'Add to Cart';
             }
         }
 
