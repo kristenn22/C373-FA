@@ -10,7 +10,7 @@ contract OrderContract {
 
     constructor() {
         orderCount = 0;
-        companyName = "LegiLah";
+        companyName = "LegitLah";
         owner = payable(msg.sender);
     }
 
@@ -33,6 +33,7 @@ contract OrderContract {
         uint timestamp;
         bool isPaid;
         bool isReleased;
+        uint deliveredAt; 
     }
 
     struct TrackingUpdate {
@@ -83,7 +84,8 @@ contract OrderContract {
             status: OrderStatus.Pending,
             timestamp: block.timestamp,
             isPaid: false,
-            isReleased: false
+            isReleased: false,
+            deliveredAt: 0
         });
         
         userOrders[msg.sender].push(orderCount);
@@ -135,6 +137,9 @@ contract OrderContract {
             statusText = "Shipped";
         } else if (_status == OrderStatus.Delivered) {
             statusText = "Delivered";
+            if (order.deliveredAt == 0) {
+                order.deliveredAt = block.timestamp;
+            }
         } else if (_status == OrderStatus.Confirmed) {
             statusText = "Confirmed";
         }
@@ -168,6 +173,9 @@ contract OrderContract {
             statusText = "Shipped";
         } else if (_status == OrderStatus.Delivered) {
             statusText = "Delivered";
+            if (order.deliveredAt == 0) {
+                order.deliveredAt = block.timestamp;
+            }
         } else if (_status == OrderStatus.Confirmed) {
             statusText = "Confirmed";
         }
@@ -191,6 +199,9 @@ contract OrderContract {
         if (_received) {
             order.status = OrderStatus.Confirmed;
             order.isPaid = true;
+            if (order.deliveredAt == 0) {
+                order.deliveredAt = block.timestamp;
+            }
             
             trackingHistory[_orderId].push(TrackingUpdate({
                 status: "Confirmed",
@@ -230,7 +241,8 @@ contract OrderContract {
         OrderStatus status,
         uint timestamp,
         bool isPaid,
-        bool isReleased
+        bool isReleased,
+        uint deliveredAt
     ) {
         require(_orderId > 0 && _orderId <= orderCount, "Invalid order ID");
         Order memory order = orders[_orderId];
@@ -248,7 +260,8 @@ contract OrderContract {
             order.status,
             order.timestamp,
             order.isPaid,
-            order.isReleased
+            order.isReleased,
+            order.deliveredAt
         );
     }
 

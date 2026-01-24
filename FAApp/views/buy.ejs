@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LegiLah - Order Summary</title>
+    <title>LegitLah - Order Summary</title>
     <style>
         * {
             margin: 0;
@@ -324,7 +324,7 @@
                 // Use 0.1 ETH as payment (price is in USD, not ETH)
                 const paymentETH = web3.utils.toWei('0.1', 'ether');
                 const imageUrl = "";
-                const description = "Product from LegiLah store";
+                const description = "Product from LegitLah store";
 
                 // Create order on blockchain
                 const createResult = await contract.methods.createOrder(

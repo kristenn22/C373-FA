@@ -379,6 +379,23 @@ app.get('/sellerorders', async(req, res) => {
     }
 });
 
+// Seller products page
+app.get('/sellerproducts', async(req, res) => {
+    const data = getCommonData(req);
+    try {
+        const sellerContractAddress = sellerContractInfo ? sellerContractInfo.options.address : 'Not deployed';
+        res.render('sellerproducts', {
+            ...data,
+            sellerContractAddress: sellerContractAddress,
+            sellerContractABI: JSON.stringify(SellerOrderContract.abi),
+            sellerContractData: JSON.stringify(SellerOrderContract)
+        });
+    } catch (error) {
+        console.error('Error in sellerproducts route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
 // Handle MetaMask connection
 app.post('/web3ConnectData', express.json(), async (req, res) => {
     try {

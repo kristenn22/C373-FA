@@ -10,7 +10,7 @@ contract SellerOrderContract {
 
     constructor() {
         sellerOrderCount = 0;
-        companyName = "LegiLah";
+        companyName = "LegitLah";
         contractOwner = msg.sender;
     }
 

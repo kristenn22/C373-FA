@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Store Orders - LegiLah</title>
+    <title>My Store Orders - LegitLah</title>
     <style>
         * {
             margin: 0;
@@ -29,6 +29,32 @@
             font-size: 28px;
             font-weight: 700;
             color: #000;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+
+        .nav-link:hover {
+            color: #000;
+        }
+
+        .nav-link.active {
+            color: #000;
+            font-weight: 600;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
         }
 
         .account-info {
@@ -205,10 +231,37 @@
             margin-bottom: 20px;
             font-size: 16px;
         }
+
+        .review-section {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+
+        .review-rating {
+            color: #fbbf24;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .review-text {
+            color: #666;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
-    <%- include('partials/navbar') %>
+    <!-- Seller Portal Navbar -->
+    <div class="header">
+        <a href="/admin" class="logo">LegitLah</a>
+        <nav class="nav-links">
+            <a href="/seller" class="nav-link">Manage Orders</a>
+            <a href="/sellerorders" class="nav-link active">View All Orders</a>
+            <a href="#" onclick="logout()" class="nav-link">Logout</a>
+        </nav>
+    </div>
     
     <div class="container">
         <h1>My Store Orders (Seller)</h1>
@@ -241,6 +294,7 @@
                     <th>Payment</th>
                     <th>Status</th>
                     <th>Date</th>
+                    <th>Review</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -281,14 +335,14 @@
                 web3 = new Web3('http://127.0.0.1:7545');
                 const accounts = await web3.eth.getAccounts();
                 userAccount = accounts[0];
-                const networkId = 5777;
+                const networkId = await web3.eth.net.getId();
                 const deployedNetwork = contractData.networks[networkId];
                 
                 if (deployedNetwork) {
                     contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
                     await loadSellerOrders();
                 } else {
-                    console.error('Contract not deployed on Ganache network 5777');
+                    console.error('Contract not deployed on network', networkId);
                     loadingMsg.style.display = 'none';
                     showNoOrders();
                 }
@@ -318,6 +372,19 @@
                         
                         // Check if user is the seller
                         if (userAccount.toLowerCase() === order.seller.toLowerCase()) {
+                            // Try to fetch review if order is confirmed
+                            let reviewInfo = null;
+                            if (Number(order.status) === 4) {
+                                try {
+                                    const response = await fetch(`/getReview?orderId=${i}`);
+                                    if (response.ok) {
+                                        reviewInfo = await response.json();
+                                    }
+                                } catch (e) {
+                                    console.log('No review found for order', i);
+                                }
+                            }
+
                             sellerOrders.push({
                                 orderId: i,
                                 productName: order.productName || 'Product',
@@ -328,7 +395,8 @@
                                 isPaid: order.isPaid || false,
                                 status: statusMap[order.status] || 'Unknown',
                                 statusCode: Number(order.status),
-                                timestamp: Number(order.timestamp)
+                                timestamp: Number(order.timestamp),
+                                review: reviewInfo
                             });
                         }
                     } catch (error) {
@@ -389,6 +457,15 @@
                     ? '<span style="background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">✓ Paid</span>'
                     : '<span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">✗ Unpaid</span>';
 
+                let reviewBadge = '<span style="background: #e5e7eb; color: #666; padding: 4px 10px; border-radius: 4px; font-size: 12px;">No review</span>';
+                if (order.review) {
+                    const stars = '⭐'.repeat(order.review.rating);
+                    reviewBadge = `<div style="background: #fef3c7; padding: 8px; border-radius: 4px; border-left: 3px solid #fbbf24;">
+                        <div style="color: #92400e; font-weight: 600; margin-bottom: 4px;">${stars} ${order.review.rating}/5</div>
+                        <div style="color: #666; font-size: 12px;">${order.review.comment.substring(0, 50)}...</div>
+                    </div>`;
+                }
+
                 const row = document.createElement('tr');
                 row.onclick = () => viewOrderDetails(order.orderId);
                 row.innerHTML = `
@@ -400,6 +477,7 @@
                     <td>${paymentBadge}</td>
                     <td><span class="status-badge ${statusClass}">${order.status}</span></td>
                     <td>${orderDate.toLocaleDateString()}</td>
+                    <td>${reviewBadge}</td>
                     <td><a href="#" onclick="event.stopPropagation(); viewOrderDetails(${order.orderId});" style="color: #2563eb; text-decoration: none; font-weight: 600;">View</a></td>
                 `;
                 ordersBody.appendChild(row);
@@ -419,7 +497,23 @@
         }
 
         function goBack() {
-            window.location.href = '/admin';
+            window.location.href = '/seller';
+        }
+
+        function logout() {
+            fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/';
+                }
+            })
+            .catch(error => console.error('Error:', error));
         }
 
         window.addEventListener('load', initWeb3);

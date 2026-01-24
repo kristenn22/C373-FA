@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LegiLah - Order Tracker</title>
+    <title>LegitLah - Order Tracker</title>
     <style>
         * {
             margin: 0;
@@ -122,7 +122,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="logo">LegiLah</div>
+        <div class="logo">LegitLah</div>
         <div>
             <% if (acct) { %>
                 <span class="account-info">Connected: <%= acct.substring(0, 6) %>...<%=acct.substring(38) %></span>
@@ -143,6 +143,9 @@
                 <div class="order-item" id="orderProduct">Loading...</div>
                 <div class="order-total" id="orderPrice">$0</div>
                 <div class="order-status" id="orderStatus"></div>
+                <div class="order-status" id="processingAt" style="color:#555; font-size:14px;"></div>
+                <div class="order-status" id="shippedAt" style="color:#555; font-size:14px;"></div>
+                <div class="order-status" id="deliveredAt" style="color:#555; font-size:14px;"></div>
             </div>
 
             <button class="details-button" onclick="viewDetails()">Details</button>
@@ -188,12 +191,13 @@
                 userAccount = accounts[0];
                 console.log('Using account:', userAccount);
                 
-                const networkId = 5777;
+                const networkId = await web3.eth.net.getId();
+                console.log('Detected network ID:', networkId);
                 const deployedNetwork = contractData.networks[networkId];
                 
                 if (deployedNetwork) {
                     contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
-                    console.log('Contract loaded:', deployedNetwork.address);
+                    console.log('Contract loaded at:', deployedNetwork.address);
 
                     // If no orderId was provided, fall back to latest order
                     if (!orderId || orderId <= 0) {
@@ -217,7 +221,8 @@
 
                     await loadOrderData();
                 } else {
-                    console.error('Contract not deployed on Ganache network 5777');
+                    console.error('Contract not deployed on network', networkId);
+                    console.error('Available networks:', Object.keys(contractData.networks));
                     document.getElementById('orderProduct').textContent = 'Contract not found on network';
                     document.getElementById('orderPrice').textContent = '$0';
                 }
@@ -232,6 +237,7 @@
             try {
                 console.log('Loading order data for orderId:', orderId);
                 const order = await contract.methods.getOrder(orderId).call();
+                const tracking = await contract.methods.getTrackingHistory(orderId).call();
                 console.log('=== FULL ORDER RESPONSE ===');
                 console.log('Order keys:', Object.keys(order));
                 console.log('orderId:', order.orderId);
@@ -277,6 +283,41 @@
                 document.getElementById('orderProduct').textContent = productName;
                 document.getElementById('orderPrice').textContent = '$' + totalAmount;
                 document.getElementById('orderStatus').textContent = 'Status: ' + statusMap[status];
+
+                // Delivered timestamp display
+                const deliveredEl = document.getElementById('deliveredAt');
+                if (order.deliveredAt && Number(order.deliveredAt) > 0) {
+                    const deliveredDate = new Date(Number(order.deliveredAt) * 1000);
+                    deliveredEl.textContent = deliveredDate.toLocaleString();
+                } else {
+                    deliveredEl.textContent = 'Waiting for delivery';
+                }
+
+                // Processing and Shipped timestamps from tracking history
+                let processingAtTs = 0;
+                let shippedAtTs = 0;
+                tracking.forEach(t => {
+                    if (!processingAtTs && t.status === 'Processing') {
+                        processingAtTs = Number(t.timestamp);
+                    }
+                    if (!shippedAtTs && t.status === 'Shipped') {
+                        shippedAtTs = Number(t.timestamp);
+                    }
+                });
+
+                const processingEl = document.getElementById('processingAt');
+                if (processingAtTs > 0) {
+                    processingEl.textContent = 'Processing at: ' + new Date(processingAtTs * 1000).toLocaleString();
+                } else {
+                    processingEl.textContent = 'Processing at: waiting';
+                }
+
+                const shippedEl = document.getElementById('shippedAt');
+                if (shippedAtTs > 0) {
+                    shippedEl.textContent = 'Shipped at: ' + new Date(shippedAtTs * 1000).toLocaleString();
+                } else {
+                    shippedEl.textContent = 'Shipped at: waiting';
+                }
             } catch (error) {
                 console.error('Error loading order:', error);
                 document.getElementById('orderProduct').textContent = 'Error loading order #' + orderId;

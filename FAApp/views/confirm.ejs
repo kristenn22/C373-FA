@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LegiLah - Confirm Delivery</title>
+    <title>LegitLah - Confirm Delivery</title>
     <style>
         * {
             margin: 0;
@@ -271,7 +271,15 @@
         let web3;
         let contract;
         let userAccount;
-        const orderId = <%= orderId %>;
+        // Convert orderId to number and validate
+        let orderId = <%= orderId %>;
+        if (typeof orderId === 'string') {
+            orderId = parseInt(orderId, 10);
+        }
+        if (!orderId || isNaN(orderId)) {
+            console.error('Invalid orderId:', '<%= orderId %>');
+            orderId = 0;
+        }
         const contractABI = <%- contractABI %>;
         const contractData = <%- contractData %>;
 
@@ -284,22 +292,31 @@
         };
 
         async function initWeb3() {
-            if (typeof window.ethereum !== 'undefined') {
-                web3 = new Web3(window.ethereum);
+            try {
+                web3 = new Web3('http://127.0.0.1:7545');
                 const accounts = await web3.eth.getAccounts();
                 userAccount = accounts[0];
                 const networkId = await web3.eth.net.getId();
+                console.log('Detected network ID:', networkId);
                 const deployedNetwork = contractData.networks[networkId];
                 
                 if (deployedNetwork) {
                     contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
+                    console.log('Contract initialized at address:', deployedNetwork.address);
+                    console.log('Loading order data for orderId:', orderId);
                     await loadOrderData();
+                } else {
+                    console.error('Contract not deployed on network', networkId);
+                    console.error('Available networks:', Object.keys(contractData.networks));
                 }
+            } catch (error) {
+                console.error('Error initializing Web3:', error);
             }
         }
 
         async function loadOrderData() {
             try {
+                console.log('Attempting to fetch order with orderId:', orderId, 'type:', typeof orderId);
                 const order = await contract.methods.getOrder(orderId).call();
                 document.getElementById('productName').textContent = order.productName || 'Product';
                 document.getElementById('orderStatus').textContent = statusMap[order.status];
