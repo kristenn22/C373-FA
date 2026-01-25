@@ -291,7 +291,8 @@
 			try {
 				web3 = new Web3('http://127.0.0.1:7545');
 				const accounts = await web3.eth.getAccounts();
-				userAccount = accounts[0];
+				// Use the second Ganache account for seller actions; fallback to first if unavailable
+				userAccount = accounts.length > 1 ? accounts[1] : accounts[0];
 
 				// Initialize order contract
 				const orderDeployedNetwork = orderContractData.networks[5777];

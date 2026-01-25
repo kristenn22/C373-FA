@@ -154,6 +154,11 @@
             color: #3730a3;
         }
 
+        .status-cancelled {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
         .role-badge {
             display: inline-block;
             padding: 4px 8px;
@@ -280,19 +285,28 @@
     <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
     <script>
         let web3;
-        let contract;
+        let orderContract;
+        let sellerContract;
         let userAccount;
         const contractABI = <%- contractABI %>;
         const contractData = <%- contractData %>;
+        const sellerContractABI = <%- sellerContractABI %>;
+        const sellerContractData = <%- sellerContractData %>;
         let allOrders = [];
         let currentFilter = 'all';
 
         const statusMap = {
+            // OrderContract statuses
             '0': 'Pending',
             '1': 'Processing',
             '2': 'Shipped',
             '3': 'Delivered',
-            '4': 'Confirmed'
+            '4': 'Confirmed',
+            // SellerOrderContract statuses
+            'accepted': 'Accepted',
+            'delivered': 'Delivered',
+            'paid': 'Paid',
+            'cancelled': 'Cancelled'
         };
 
         async function initWeb3() {
@@ -303,17 +317,23 @@
                 web3 = new Web3('http://127.0.0.1:7545');
                 const accounts = await web3.eth.getAccounts();
                 userAccount = accounts[0];
-                const networkId = 5777;
-                const deployedNetwork = contractData.networks[networkId];
+                const networkId = await web3.eth.net.getId();
+                const orderNet = contractData.networks[networkId];
+                const sellerNet = sellerContractData.networks[networkId];
                 
-                if (deployedNetwork) {
-                    contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
-                    await loadOrderHistory();
-                } else {
-                    console.error('Contract not deployed on Ganache network 5777');
+                if (!orderNet) {
+                    console.error('Order contract not deployed on network', networkId);
                     loadingMsg.style.display = 'none';
                     showNoOrders();
+                    return;
                 }
+
+                orderContract = new web3.eth.Contract(contractABI, orderNet.address);
+                if (sellerNet) {
+                    sellerContract = new web3.eth.Contract(sellerContractABI, sellerNet.address);
+                }
+
+                await loadOrderHistory();
             } catch (error) {
                 console.error('Error initializing Web3:', error);
                 loadingMsg.style.display = 'none';
@@ -326,36 +346,66 @@
                 const loadingMsg = document.getElementById('loadingMsg');
                 loadingMsg.style.display = 'block';
                 
-                // Get total order count
-                const orderCount = await contract.methods.getOrderCount().call();
-                const count = Number(orderCount);
-                
-                console.log('Total orders in blockchain:', count);
                 allOrders = [];
 
-                // Fetch all orders
-                for (let i = 1; i <= count; i++) {
+                // Load regular orders (OrderContract)
+                const orderCount = await orderContract.methods.getOrderCount().call();
+                for (let i = 1; i <= Number(orderCount); i++) {
                     try {
-                        const order = await contract.methods.getOrder(i).call();
-                        
-                        // Check if user is buyer or seller in this order
+                        const order = await orderContract.methods.getOrder(i).call();
                         const isBuyer = userAccount.toLowerCase() === order.buyer.toLowerCase();
                         const isSeller = userAccount.toLowerCase() === order.seller.toLowerCase();
-                        
                         if (isBuyer || isSeller) {
                             allOrders.push({
+                                source: 'order',
                                 orderId: i,
                                 productName: order.productName || 'Product',
                                 totalAmount: String(order.totalAmount) || '0',
                                 status: statusMap[order.status] || 'Unknown',
+                                statusClass: 'status-' + (statusMap[order.status] || 'pending').toLowerCase().replace(' ', '-'),
                                 statusCode: Number(order.status),
                                 timestamp: Number(order.timestamp),
-                                isBuyer: isBuyer,
-                                isSeller: isSeller
+                                isBuyer,
+                                isSeller
                             });
                         }
                     } catch (error) {
                         console.error('Error loading order', i, ':', error);
+                    }
+                }
+
+                // Load seller orders (SellerOrderContract) if deployed
+                if (sellerContract) {
+                    const sellerOrderCount = await sellerContract.methods.getSellerOrderCount().call();
+                    for (let i = 1; i <= Number(sellerOrderCount); i++) {
+                        try {
+                            const order = await sellerContract.methods.getSellerOrder(i).call();
+                            const isBuyer = userAccount.toLowerCase() === order.buyer.toLowerCase();
+                            const isSeller = userAccount.toLowerCase() === order.seller.toLowerCase();
+                            if (isBuyer || isSeller) {
+                                const statusText = (order.status == 0 ? 'Pending'
+                                    : order.status == 1 ? 'Accepted'
+                                    : order.status == 2 ? 'Shipped'
+                                    : order.status == 3 ? 'Delivered'
+                                    : order.status == 4 ? 'Paid'
+                                    : 'Cancelled');
+
+                                allOrders.push({
+                                    source: 'seller',
+                                    orderId: i,
+                                    productName: order.productName || 'Product',
+                                    totalAmount: String(order.totalAmount) || '0',
+                                    status: statusText,
+                                    statusClass: 'status-' + statusText.toLowerCase(),
+                                    statusCode: Number(order.status),
+                                    timestamp: Number(order.timestamp),
+                                    isBuyer,
+                                    isSeller
+                                });
+                            }
+                        } catch (error) {
+                            console.error('Error loading seller order', i, ':', error);
+                        }
                     }
                 }
 
@@ -407,7 +457,7 @@
             
             filteredOrders.forEach(order => {
                 const orderDate = new Date(order.timestamp * 1000);
-                const statusClass = 'status-' + order.status.toLowerCase().replace(' ', '-');
+                const statusClass = order.statusClass || ('status-' + order.status.toLowerCase().replace(' ', '-'));
                 let roleText = '';
                 let roleBadges = '';
                 
@@ -419,7 +469,7 @@
                 }
 
                 const row = document.createElement('tr');
-                row.onclick = () => viewOrderDetails(order.orderId);
+                row.onclick = () => viewOrderDetails(order.orderId, order.source);
                 row.innerHTML = `
                     <td class="order-id">#${order.orderId}</td>
                     <td>${order.productName}</td>
@@ -427,7 +477,7 @@
                     <td><span class="status-badge ${statusClass}">${order.status}</span></td>
                     <td>${roleBadges}</td>
                     <td>${orderDate.toLocaleDateString()}</td>
-                    <td><a href="#" onclick="event.stopPropagation(); viewOrderDetails(${order.orderId});" style="color: #2563eb; text-decoration: none; font-weight: 600;">View</a></td>
+                    <td><a href="#" onclick="event.stopPropagation(); viewOrderDetails(${order.orderId}, '${order.source}');" style="color: #2563eb; text-decoration: none; font-weight: 600;">View</a></td>
                 `;
                 ordersBody.appendChild(row);
             });
@@ -436,7 +486,8 @@
             noOrders.style.display = 'none';
         }
 
-        function viewOrderDetails(orderId) {
+        function viewOrderDetails(orderId, source) {
+            // For now both routes use same details page; we still pass orderId
             window.location.href = '/orderdetails?orderId=' + orderId;
         }
 

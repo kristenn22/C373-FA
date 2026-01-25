@@ -57,6 +57,7 @@ contract SellerOrderContract {
     event OrderShipped(uint orderId, address seller, string trackingNumber);
     event PaymentReleased(uint orderId, address seller, uint amount);
     event SellerProfileCreated(address seller, string sellerName);
+    event OrderCancelled(uint orderId, address seller);
 
     // Create seller profile
     function createSellerProfile(string memory _sellerName) public {
@@ -198,8 +199,8 @@ contract SellerOrderContract {
         require(!order.isShipped, "Cannot cancel a shipped order");
         
         order.status = SellerOrderStatus.Cancelled;
-        
-        emit OrderAccepted(_orderId, msg.sender);
+
+        emit OrderCancelled(_orderId, msg.sender);
     }
 
     // Get seller order details

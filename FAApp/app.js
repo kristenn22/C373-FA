@@ -341,7 +341,9 @@ app.get('/orderhistory', async(req, res) => {
         res.render('orderhistory', {
             ...data,
             contractABI: JSON.stringify(OrderContract.abi),
-            contractData: JSON.stringify(OrderContract)
+            contractData: JSON.stringify(OrderContract),
+            sellerContractABI: JSON.stringify(SellerOrderContract.abi),
+            sellerContractData: JSON.stringify(SellerOrderContract)
         });
     } catch (error) {
         console.error('Error in orderhistory route:', error);
@@ -370,8 +372,8 @@ app.get('/sellerorders', async(req, res) => {
     try {
         res.render('sellerorders', {
             ...data,
-            contractABI: JSON.stringify(OrderContract.abi),
-            contractData: JSON.stringify(OrderContract)
+            sellerContractABI: JSON.stringify(SellerOrderContract.abi),
+            sellerContractData: JSON.stringify(SellerOrderContract)
         });
     } catch (error) {
         console.error('Error in sellerorders route:', error);
