@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - LegitLah</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #000;
+            text-decoration: none;
+        }
+
+        .logo:hover {
+            color: #333;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            flex: 1;
+            margin-left: 50px;
+        }
+
+        .nav-link {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover {
+            color: #000;
+        }
+
+        .wallet-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .account-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .register-container {
+            max-width: 450px;
+            margin: 40px auto 60px;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .register-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .register-subtitle {
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #000;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #000;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+        }
+
+        .form-input::placeholder {
+            color: #999;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-row .form-group {
+            margin-bottom: 0;
+        }
+
+        .password-requirements {
+            font-size: 12px;
+            color: #999;
+            margin-top: 6px;
+        }
+
+        .requirement {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .requirement.met {
+            color: #3c3;
+        }
+
+        .form-checkbox {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .form-checkbox input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #000;
+            margin-top: 2px;
+        }
+
+        .form-checkbox label {
+            font-size: 13px;
+            color: #666;
+            cursor: pointer;
+            line-height: 1.4;
+        }
+
+        .form-checkbox a {
+            color: #000;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .form-checkbox a:hover {
+            color: #666;
+        }
+
+        .btn-register {
+            width: 100%;
+            padding: 12px;
+            background: #000;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-bottom: 16px;
+        }
+
+        .btn-register:hover {
+            background: #333;
+        }
+
+        .btn-register:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 24px 0;
+            color: #ddd;
+            font-size: 14px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #ddd;
+        }
+
+        .divider::before {
+            margin-right: 12px;
+        }
+
+        .divider::after {
+            margin-left: 12px;
+        }
+
+        .btn-metamask {
+            width: 100%;
+            padding: 12px;
+            background: #f6851b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-metamask:hover {
+            background: #e27817;
+        }
+
+        .btn-metamask:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .login-link a {
+            color: #000;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .login-link a:hover {
+            color: #666;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .success-message {
+            background: #efe;
+            color: #3c3;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .register-container {
+                margin: 30px 15px;
+                padding: 30px 20px;
+            }
+
+            .register-title {
+                font-size: 24px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .header {
+                padding: 15px 20px;
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .nav-links {
+                margin-left: 0;
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <a href="/" class="logo">LegitLah</a>
+    </header>
+
+    <!-- Register Container -->
+    <div class="register-container">
+        <h1 class="register-title">Create Account</h1>
+        <p class="register-subtitle">Join LegitLah to buy and sell securely</p>
+
+        <!-- Messages -->
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+
+        <!-- Register Form -->
+        <form id="registerForm" onsubmit="handleRegister(event)">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="firstName">First Name</label>
+                    <input 
+                        type="text" 
+                        id="firstName" 
+                        class="form-input" 
+                        placeholder="John"
+                    >
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="lastName">Last Name</label>
+                    <input 
+                        type="text" 
+                        id="lastName" 
+                        class="form-input" 
+                        placeholder="Doe"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    class="form-input" 
+                    placeholder="your@email.com"
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="phone">Phone Number</label>
+                <input 
+                    type="tel" 
+                    id="phone" 
+                    class="form-input" 
+                    placeholder="+1 (555) 000-0000"
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    class="form-input" 
+                    placeholder="Minimum 8 characters"
+                    oninput="checkPasswordStrength()"
+                >
+                <div class="password-requirements">
+                    <div class="requirement" id="reqLength">
+                        <span>✗</span> <span>At least 8 characters</span>
+                    </div>
+                    <div class="requirement" id="reqUppercase">
+                        <span>✗</span> <span>One uppercase letter</span>
+                    </div>
+                    <div class="requirement" id="reqNumber">
+                        <span>✗</span> <span>One number</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="confirmPassword">Confirm Password</label>
+                <input 
+                    type="password" 
+                    id="confirmPassword" 
+                    class="form-input" 
+                    placeholder="Re-enter your password"
+                >
+            </div>
+
+            <div class="form-checkbox">
+                <input type="checkbox" id="termsCheckbox">
+                <label for="termsCheckbox">
+                    I agree to the <a href="#" target="_blank">Terms of Service</a> and <a href="#" target="_blank">Privacy Policy</a>
+                </label>
+            </div>
+
+            <button type="submit" class="btn-register">Create Account</button>
+        </form>
+
+        <!-- Divider -->
+        <div class="divider">or</div>
+
+        <!-- MetaMask Registration -->
+        <button type="button" class="btn-metamask" id="metamaskBtn" onclick="connectMetaMaskRegister()">
+            <span>🦊</span>
+            <span>Sign Up with MetaMask</span>
+        </button>
+
+        <!-- Login Link -->
+        <div class="login-link">
+            Already have an account? <a href="/login">Sign in here</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script>
+        // Check password strength
+        function checkPasswordStrength() {
+            const password = document.getElementById('password').value;
+            
+            const reqLength = password.length >= 8;
+            const reqUppercase = /[A-Z]/.test(password);
+            const reqNumber = /[0-9]/.test(password);
+
+            updateRequirement('reqLength', reqLength);
+            updateRequirement('reqUppercase', reqUppercase);
+            updateRequirement('reqNumber', reqNumber);
+        }
+
+        function updateRequirement(id, met) {
+            const elem = document.getElementById(id);
+            if (met) {
+                elem.classList.add('met');
+                elem.querySelector('span').textContent = '✓';
+            } else {
+                elem.classList.remove('met');
+                elem.querySelector('span').textContent = '✗';
+            }
+        }
+
+        // Handle registration
+        function handleRegister(event) {
+            event.preventDefault();
+            
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const termsAccepted = document.getElementById('termsCheckbox').checked;
+
+            // Validation
+            if (!firstName || !lastName || !email || !phone || !password || !confirmPassword) {
+                showError('Please fill in all fields');
+                return;
+            }
+
+            if (password.length < 8) {
+                showError('Password must be at least 8 characters');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showError('Passwords do not match');
+                return;
+            }
+
+            if (!termsAccepted) {
+                showError('You must accept the terms and conditions');
+                return;
+            }
+
+            if (!email.includes('@')) {
+                showError('Please enter a valid email address');
+                return;
+            }
+
+            // Submit registration
+            const registerBtn = document.querySelector('.btn-register');
+            registerBtn.disabled = true;
+
+            setTimeout(() => {
+                console.log('Registration attempt:', { firstName, lastName, email, phone });
+                
+                showSuccess('Account created successfully! Redirecting to login...');
+                
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 2000);
+            }, 1000);
+        }
+
+        // Connect MetaMask for registration
+        async function connectMetaMaskRegister() {
+            if (!window.ethereum) {
+                showError('MetaMask is not installed. Please install it to continue.');
+                return;
+            }
+
+            const btn = document.getElementById('metamaskBtn');
+            btn.disabled = true;
+
+            try {
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                const account = accounts[0];
+                console.log('Connected account:', account);
+
+                // Load Web3 and contract
+                const web3 = new Web3(window.ethereum);
+                const contractData = await fetch('/build/OrderContract.json').then(r => r.json());
+                const networkId = await web3.eth.net.getId();
+                const deployedNetwork = contractData.networks[networkId];
+                
+                if (!deployedNetwork) {
+                    showError('Please connect to the correct network (Ganache on port 7545)');
+                    btn.disabled = false;
+                    return;
+                }
+
+                // Get order count
+                const contract = new web3.eth.Contract(contractData.abi, deployedNetwork.address);
+                const orderCount = await contract.methods.getOrderCount().call();
+                const orderCountValue = orderCount.toString();
+
+                // Send connection data to backend
+                const response = await fetch('/web3ConnectData', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contractAddress: deployedNetwork.address,
+                        acct: account,
+                        orderCnt: orderCountValue
+                    })
+                });
+
+                if (response.ok) {
+                    showSuccess('MetaMask wallet connected! Creating account...');
+                    setTimeout(() => {
+                        window.location.href = '/products';
+                    }, 1500);
+                } else {
+                    showError('Failed to register with MetaMask');
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error('MetaMask registration error:', error);
+                showError('Failed to connect MetaMask: ' + error.message);
+                btn.disabled = false;
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+        }
+
+        // MetaMask event listeners are omitted on the register page to avoid reload loops.
+    </script>
+</body>
+</html>

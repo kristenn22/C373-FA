@@ -1,0 +1,64 @@
+<header class="header" style="background: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+    <a href="/" class="logo" style="font-size: 24px; font-weight: bold; color: #000; text-decoration: none;">LegitLah</a>
+    <nav class="nav-links" style="display: flex; gap: 24px; align-items: center;">
+        <% if (isLoggedIn) { %>
+            <a href="/products" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'">Products</a>
+            <a href="/buyerorders" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'">My Orders</a>
+            <a href="/returnbuyer" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'">Returns</a>
+            <a href="/cart" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'" title="Cart">🛒 My Cart</a>
+            <a href="#" onclick="logout()" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s; cursor: pointer;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'">Logout</a>
+        <% } else { %>
+            <a href="/login" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'">Login</a>
+            <a href="/register" class="nav-link" style="color: #666; text-decoration: none; font-size: 14px; transition: color 0.3s;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#666'">Register</a>
+        <% } %>
+    </nav>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <% if (acct) { %>
+            <span style="color: #666; font-size: 14px;">Connected: <%= acct.substring(0, 6) %>...<%=acct.substring(38) %></span>
+        <% } %>
+    </div>
+</header>
+
+<script>
+function logout() {
+    fetch('/logout', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Logged out successfully');
+            window.location.href = '/';
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+
+<style>
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.nav-link {
+    margin-left: 15px;
+    margin-right: 15px;
+}
+
+.nav-link.btn-link {
+    border: none;
+    background: none;
+    color: #adb5bd !important;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 0.5rem 0;
+}
+
+.nav-link.btn-link:hover {
+    color: #fff !important;
+}
+</style>

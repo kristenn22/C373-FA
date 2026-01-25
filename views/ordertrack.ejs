@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LegiLah - Order Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px; background: white; margin-bottom: 30px;
+      border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .logo { font-size: 24px; font-weight: bold; }
+    .account-info { font-size: 14px; color: #666; }
+
+    .container {
+      max-width: 600px; margin: 0 auto; background: white; padding: 40px;
+      border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    h1 { font-size: 28px; margin-bottom: 10px; color: #333; }
+
+    .order-summary {
+      padding: 20px; background: #f9f9f9; border-radius: 8px; margin-bottom: 30px;
+    }
+    .order-summary h2 { font-size: 18px; margin-bottom: 15px; color: #333; }
+    .order-item { font-size: 16px; margin-bottom: 6px; color: #666; line-height: 1.35; }
+    .order-total { font-size: 20px; font-weight: bold; color: #2563eb; margin-top: 10px; }
+
+    .product-row { display:flex; gap:12px; align-items:center; margin: 10px 0; }
+    .product-row img {
+      width: 86px; height: 86px; object-fit: cover;
+      border-radius: 10px; border: 1px solid #e5e5e5; background:#eee;
+    }
+
+    .details-button {
+      width: 100%; padding: 16px; background: #000; color: white; border: none;
+      border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 20px;
+    }
+    .details-button:hover { background: #333; }
+
+    .nav-links { display: flex; gap: 15px; margin-top: 20px; }
+    .nav-link { color: #2563eb; text-decoration: none; font-size: 14px; }
+    .nav-link:hover { text-decoration: underline; }
+
+    .muted { color:#888; font-size: 13px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">LegiLah</div>
+  <div>
+    <% if (acct) { %>
+      <span class="account-info">
+        Connected: <%= acct.substring(0,6) %>...<%= acct.substring(38) %>
+      </span>
+    <% } %>
+  </div>
+</div>
+
+<div class="container">
+  <h1>Order Tracker</h1>
+
+  <div class="order-summary">
+    <h2>Order summary:</h2>
+
+    <div class="order-item" id="txInfo">Tx: (loading...)</div>
+    <div class="order-item muted mono" id="txInfo2"></div>
+
+    <div class="product-row">
+      <img id="orderImage" alt="Product image" style="display:none;"
+           onerror="this.style.display='none';" />
+      <div>
+        <div class="order-item" id="orderProduct">Loading...</div>
+        <div class="muted" id="orderExtra"></div>
+      </div>
+    </div>
+
+    <div class="order-total" id="orderPrice">$0</div>
+    <div class="order-item" id="orderStatus"></div>
+  </div>
+
+  <button class="details-button" onclick="viewDetails()">Details</button>
+
+  <div class="nav-links">
+    <a href="/buyerorders" class="nav-link">← Back to Order History</a>
+  </div>
+</div>
+
+<!-- Use Web3 v1.x (stable with Ganache + getPastEvents) -->
+<script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+
+<script>
+  let web3;
+  let contract;
+
+  const contractABI = <%- contractABI %>;
+  const contractData = <%- contractData %>;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const orderId = Number(urlParams.get('orderId')) || Number('<%= orderId || 0 %>');
+
+  const statusMap = {
+    '0': 'Pending',
+    '1': 'Processing',
+    '2': 'Shipped',
+    '3': 'Delivered',
+    '4': 'Confirmed'
+  };
+
+  function shortHash(h) {
+    if (!h || typeof h !== 'string') return '';
+    return h.slice(0, 10) + '…' + h.slice(-8);
+  }
+
+  function setTx(text, subtext="") {
+    document.getElementById('txInfo').textContent = text;
+    document.getElementById('txInfo2').textContent = subtext;
+  }
+
+  async function initGanache() {
+    try {
+      // Always read from Ganache (same place your tx are created)
+      web3 = new Web3('http://127.0.0.1:7545');
+
+      const netId = await web3.eth.net.getId(); // usually 5777 or 1337
+      let deployed = (contractData.networks && contractData.networks[netId]) || null;
+
+      // Fallback: use first network inside artifact
+      if (!deployed && contractData.networks) {
+        const keys = Object.keys(contractData.networks);
+        if (keys.length) deployed = contractData.networks[keys[0]];
+      }
+
+      if (!deployed || !deployed.address) {
+        setTx("Tx: (not available)", "");
+        document.getElementById('orderProduct').textContent = `Contract not deployed on Ganache (netId ${netId})`;
+        return;
+      }
+
+      contract = new web3.eth.Contract(contractABI, deployed.address);
+
+      await loadOrderData();
+      await loadLatestEventTx();
+
+    } catch (e) {
+      console.error(e);
+      document.getElementById('orderProduct').textContent =
+        "Error connecting to Ganache (is it running on 127.0.0.1:7545?)";
+      setTx("Tx: (error)", "");
+    }
+  }
+
+  async function loadOrderData() {
+    try {
+      if (!orderId || orderId <= 0) {
+        document.getElementById('orderProduct').textContent = "No order selected.";
+        document.getElementById('orderPrice').textContent = "$0";
+        document.getElementById('orderStatus').textContent = "";
+        setTx("Tx: (n/a)", "");
+        return;
+      }
+
+      // Your getOrder returns flat named fields:
+      // productName, imageUrl, totalAmount, status, etc.
+      const o = await contract.methods.getOrder(orderId).call();
+      console.log("getOrder():", o);
+
+      const productName = o.productName || "Product";
+      const imageUrl = (o.imageUrl || "").trim(); // returned by getOrder
+      const totalAmount = o.totalAmount;
+      const statusNum = String(o.status);
+
+      document.getElementById('orderProduct').textContent = productName;
+      document.getElementById('orderPrice').textContent = "$" + String(totalAmount);
+      document.getElementById('orderStatus').textContent = "Status: " + (statusMap[statusNum] || statusNum);
+
+      // extra info (buyerName + deliveryAddress)
+      const extra = [];
+      if (o.buyerName) extra.push("Buyer: " + o.buyerName);
+      if (o.deliveryAddress) extra.push("Address: " + o.deliveryAddress);
+      document.getElementById('orderExtra').textContent = extra.join(" • ");
+
+      // image
+      const img = document.getElementById('orderImage');
+      if (imageUrl) {
+        img.src = imageUrl;
+        img.style.display = "block";
+      } else {
+        img.style.display = "none";
+      }
+    } catch (err) {
+      console.error("loadOrderData error:", err);
+      document.getElementById('orderProduct').textContent = "Error loading order #" + orderId;
+    }
+  }
+
+  async function loadLatestEventTx() {
+    try {
+      setTx("Tx: searching events…", "");
+
+      // Pull these events (they all include orderId in your contract)
+      const names = [
+        'OrderCreated',
+        'OrderPaid',
+        'OrderStatusUpdated',
+        'DeliveryConfirmed',
+        'TrackingNumberUpdated'
+      ];
+
+      let all = [];
+      for (const name of names) {
+        try {
+          const evs = await contract.getPastEvents(name, { fromBlock: 0, toBlock: 'latest' });
+          all = all.concat(evs || []);
+        } catch (e) {
+          // If an event name doesn't exist in ABI for some reason, skip it
+          console.warn("Skipping event", name, e);
+        }
+      }
+
+      // Match the orderId
+      const matches = all
+        .filter(ev => ev && ev.returnValues && String(ev.returnValues.orderId) === String(orderId))
+        .sort((a, b) => (b.blockNumber || 0) - (a.blockNumber || 0));
+
+      if (!matches.length) {
+        setTx("Tx: No matching event found for this order.", "Tip: this happens if Ganache was reset and old history is gone.");
+        return;
+      }
+
+      const ev = matches[0];
+      const txHash = ev.transactionHash;
+
+      const [receipt, tx] = await Promise.all([
+        web3.eth.getTransactionReceipt(txHash),
+        web3.eth.getTransaction(txHash)
+      ]);
+
+      setTx(
+        `Tx: ${shortHash(txHash)} | Event: ${ev.event} | Block: ${receipt.blockNumber} | GasUsed: ${receipt.gasUsed}`,
+        `From: ${shortHash(tx.from)}  To: ${shortHash(tx.to)}  Value: ${web3.utils.fromWei(String(tx.value || '0'), 'ether')} ETH`
+      );
+    } catch (err) {
+      console.error("loadLatestEventTx error:", err);
+      setTx("Tx: Unable to load tx info.", "Open DevTools Console for the exact error.");
+    }
+  }
+
+  function viewDetails() {
+    window.location.href = "/orderdetails?orderId=" + orderId;
+  }
+
+  window.addEventListener('load', initGanache);
+</script>
+
+</body>
+</html>

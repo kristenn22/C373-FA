@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Orders - LegiLah</title>
+
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#f5f5f5; }
+
+    .container{
+      max-width:1100px;
+      margin:40px auto;
+      background:#fff;
+      padding:40px;
+      border-radius:12px;
+      box-shadow:0 2px 8px rgba(0,0,0,.1);
+    }
+
+    /* Delivery-style top header inside container */
+    .page-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:18px;
+    }
+    .page-top h1{
+      margin:0;
+      color:#111;
+      font-size:32px;
+    }
+    .page-sub{
+      margin-top:6px;
+      color:#666;
+      font-size:14px;
+    }
+    .back-link{
+      text-decoration:none;
+      color:#111;
+      background:#fff;
+      border:1px solid #e5e7eb;
+      padding:10px 14px;
+      border-radius:10px;
+      font-weight:700;
+      font-size:13px;
+    }
+    .back-link:hover{ border-color:#000; }
+
+    /* Delivery-style filter pills */
+    .filter-section{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin: 8px 0 18px;
+    }
+    .filter-btn{
+      padding:10px 18px;
+      border:2px solid #ddd;
+      background:#fff;
+      border-radius:999px;
+      cursor:pointer;
+      font-size:13px;
+      transition:.2s;
+      font-weight:700;
+    }
+    .filter-btn.active{
+      background:#000;
+      color:#fff;
+      border-color:#000;
+    }
+    .filter-btn:hover{ border-color:#000; }
+
+    .loading, .no-orders{
+      text-align:center;
+      padding:40px;
+      color:#777;
+      font-size:15px;
+    }
+
+    .orders-table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:10px;
+    }
+    .orders-table thead{
+      background:#f9f9f9;
+      border-bottom:2px solid #ddd;
+    }
+    .orders-table th{
+      padding:15px;
+      text-align:left;
+      font-weight:800;
+      color:#333;
+      font-size:14px;
+    }
+    .orders-table td{
+      padding:15px;
+      border-bottom:1px solid #eee;
+      color:#666;
+      font-size:14px;
+    }
+    .orders-table tbody tr:hover{
+      background:#f9f9f9;
+      cursor:pointer;
+    }
+
+    .order-id{ font-weight:800; color:#111; }
+
+    .status-badge{
+      display:inline-block;
+      padding:6px 12px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:800;
+    }
+    .status-pending{ background:#fef3c7; color:#92400e; }
+    .status-processing{ background:#bfdbfe; color:#1e40af; }
+    .status-shipped{ background:#d1d5db; color:#1f2937; }
+    .status-delivered{ background:#d1fae5; color:#065f46; }
+    .status-confirmed{ background:#c7d2fe; color:#3730a3; }
+
+    .btn{
+      padding:8px 12px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      background:#fff;
+      cursor:pointer;
+      font-weight:800;
+      font-size:13px;
+    }
+    .btn-primary{
+      background:#000;
+      color:#fff;
+      border-color:#000;
+    }
+    .btn-primary:hover{ background:#333; }
+  </style>
+</head>
+
+<body>
+  <%- include('partials/navbar') %>
+
+  <div class="container">
+    <div class="page-top">
+      <div>
+        <h1>My Orders (Buyer)</h1>
+        <div class="page-sub">View your order progress and open details.</div>
+      </div>
+      <a class="back-link" href="/user-home">← Back to Dashboard</a>
+    </div>
+
+    <div class="filter-section">
+      <button class="filter-btn active" onclick="filterOrders('all', event)">All</button>
+      <button class="filter-btn" onclick="filterOrders('processing', event)">Processing</button>
+      <button class="filter-btn" onclick="filterOrders('shipped', event)">Shipped</button>
+      <button class="filter-btn" onclick="filterOrders('delivered', event)">Delivered</button>
+      <button class="filter-btn" onclick="filterOrders('confirmed', event)">Confirmed</button>
+    </div>
+
+    <div id="loadingMsg" class="loading" style="display:none;">
+      <p>Loading your orders...</p>
+    </div>
+
+    <div id="noOrders" class="no-orders" style="display:none;">
+      <p>You haven't placed any orders yet</p>
+    </div>
+
+    <table class="orders-table" id="ordersTable" style="display:none;">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Product</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="ordersBody"></tbody>
+    </table>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <script>
+    let web3;
+    let contract;
+    let userAccount;
+    const contractABI = <%- contractABI %>;
+    const contractData = <%- contractData %>;
+
+    let buyerOrders = [];
+    let currentFilter = 'all';
+
+    const statusMap = {
+      '0': 'Pending',
+      '1': 'Processing',
+      '2': 'Shipped',
+      '3': 'Delivered',
+      '4': 'Confirmed'
+    };
+
+    function filterOrders(filter, event) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      if (event && event.target) event.target.classList.add('active');
+      displayOrders();
+    }
+
+    async function initWeb3() {
+      try {
+        const loadingMsg = document.getElementById('loadingMsg');
+        loadingMsg.style.display = 'block';
+
+        web3 = new Web3('http://127.0.0.1:7545');
+        const accounts = await web3.eth.getAccounts();
+        userAccount = accounts[0];
+
+        const networkId = 5777; // keep your original approach
+        const deployedNetwork = contractData.networks[networkId];
+
+        if (deployedNetwork) {
+          contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
+          await loadBuyerOrders();
+        } else {
+          console.error('Contract not deployed on Ganache network 5777');
+          loadingMsg.style.display = 'none';
+          showNoOrders();
+        }
+      } catch (error) {
+        console.error('Error initializing Web3:', error);
+        document.getElementById('loadingMsg').style.display = 'none';
+        showNoOrders();
+      }
+    }
+
+    async function loadBuyerOrders() {
+      try {
+        const loadingMsg = document.getElementById('loadingMsg');
+        loadingMsg.style.display = 'block';
+
+        const orderCount = await contract.methods.getOrderCount().call();
+        const count = Number(orderCount);
+        buyerOrders = [];
+
+        for (let i = 1; i <= count; i++) {
+          try {
+            const order = await contract.methods.getOrder(i).call();
+            if (userAccount.toLowerCase() === order.buyer.toLowerCase()) {
+              buyerOrders.push({
+                orderId: i,
+                productName: order.productName || 'Product',
+                totalAmount: String(order.totalAmount) || '0',
+                status: statusMap[order.status] || 'Unknown',
+                statusCode: Number(order.status),
+                timestamp: Number(order.timestamp)
+              });
+            }
+          } catch (error) {
+            console.error('Error loading order', i, ':', error);
+          }
+        }
+
+        loadingMsg.style.display = 'none';
+        displayOrders();
+      } catch (error) {
+        console.error('Error loading buyer orders:', error);
+        document.getElementById('loadingMsg').style.display = 'none';
+        showNoOrders();
+      }
+    }
+
+    function displayOrders() {
+      const ordersBody = document.getElementById('ordersBody');
+      const ordersTable = document.getElementById('ordersTable');
+      const noOrders = document.getElementById('noOrders');
+
+      let filtered = buyerOrders;
+      if (currentFilter !== 'all') {
+        filtered = buyerOrders.filter(o => o.status.toLowerCase() === currentFilter);
+      }
+
+      if (filtered.length === 0) {
+        ordersTable.style.display = 'none';
+        noOrders.style.display = 'block';
+        return;
+      }
+
+      filtered.sort((a, b) => b.orderId - a.orderId);
+      ordersBody.innerHTML = '';
+
+      filtered.forEach(order => {
+        const orderDate = new Date(order.timestamp * 1000);
+        const statusClass = 'status-' + order.status.toLowerCase().replace(' ', '-');
+
+        const row = document.createElement('tr');
+        row.onclick = () => viewOrderDetails(order.orderId);
+        row.innerHTML = `
+          <td class="order-id">#${order.orderId}</td>
+          <td>${order.productName}</td>
+          <td>$${order.totalAmount}</td>
+          <td><span class="status-badge ${statusClass}">${order.status}</span></td>
+          <td>${orderDate.toLocaleDateString()}</td>
+          <td>
+            <button class="btn btn-primary"
+              onclick="event.stopPropagation(); viewOrderDetails(${order.orderId});">
+              View
+            </button>
+          </td>
+        `;
+        ordersBody.appendChild(row);
+      });
+
+      ordersTable.style.display = 'table';
+      noOrders.style.display = 'none';
+    }
+
+    function viewOrderDetails(orderId) {
+      window.location.href = '/orderdetails?orderId=' + orderId;
+    }
+
+    function showNoOrders() {
+      document.getElementById('ordersTable').style.display = 'none';
+      document.getElementById('noOrders').style.display = 'block';
+    }
+
+    window.addEventListener('load', initWeb3);
+  </script>
+</body>
+</html>

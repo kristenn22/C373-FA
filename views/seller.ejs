@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller Portal - Manage Orders</title>
+
+  <!-- Delivery-style UI + Filtering (FULL PAGE) -->
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background:#f5f5f5;
+      color:#111;
+      margin:0;
+    }
+
+    .container{
+      max-width:1100px;
+      margin:40px auto;
+      background:#fff;
+      padding:40px;
+      border-radius:12px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .page-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:18px;
+    }
+    .page-top h1{
+      margin:0;
+      color:#111;
+      font-size:32px;
+    }
+    .page-sub{
+      margin-top:6px;
+      color:#666;
+      font-size:14px;
+    }
+
+    /* Filter pills (delivery-style) */
+    .filter-section{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin: 8px 0 18px;
+    }
+    .filter-btn{
+      padding:10px 18px;
+      border:2px solid #ddd;
+      background:#fff;
+      border-radius:999px;
+      cursor:pointer;
+      font-size:13px;
+      transition:.2s;
+      font-weight:800;
+    }
+    .filter-btn.active{
+      background:#000;
+      color:#fff;
+      border-color:#000;
+    }
+    .filter-btn:hover{ border-color:#000; }
+
+    /* Cards */
+    .card{
+      border:1px solid #e5e7eb;
+      border-radius:16px;
+      padding:16px;
+      margin-top:16px;
+      background:#fff;
+      box-shadow:0 6px 18px rgba(0,0,0,0.05);
+    }
+    .card h2{
+      margin:0 0 10px;
+      font-size:16px;
+      font-weight:900;
+      color:#111;
+    }
+
+    label{ display:block; font-weight:900; margin-bottom:6px; color:#111; font-size:13px; }
+
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:12px;
+      word-break: break-all;
+    }
+
+    /* Buttons */
+    .btn{
+      padding:8px 12px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      background:#fff;
+      cursor:pointer;
+      font-weight:900;
+      font-size:13px;
+      transition:.2s;
+    }
+    .btn:hover{ border-color:#000; }
+    .btn-primary{
+      background:#000;
+      color:#fff;
+      border-color:#000;
+    }
+    .btn-primary:hover{ background:#333; }
+    .btn-ghost{
+      background:#f3f4f6;
+      border-color:#e5e7eb;
+      color:#111;
+    }
+    .btn-ghost:hover{ background:#e5e7eb; }
+
+    /* Status messages */
+    .status-message{
+      padding:12px;
+      border-radius:12px;
+      margin-top:10px;
+      font-size:13px;
+      font-weight:800;
+    }
+    .status-success{ background:#ecfdf3; color:#166534; }
+    .status-error{ background:#fef2f2; color:#991b1b; }
+    .status-info{ background:#eff6ff; color:#1d4ed8; }
+
+    /* Table (delivery-style) */
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:12px;
+    }
+    thead{
+      background:#f9f9f9;
+      border-bottom:2px solid #ddd;
+    }
+    th{
+      padding:15px;
+      text-align:left;
+      font-weight:900;
+      color:#333;
+      font-size:14px;
+    }
+    td{
+      padding:15px;
+      border-bottom:1px solid #eee;
+      color:#666;
+      font-size:14px;
+      vertical-align:top;
+    }
+    tbody tr:hover{
+      background:#f9f9f9;
+      cursor:pointer;
+    }
+    .order-id{ font-weight:900; color:#111; }
+
+    /* Status badge (delivery-style pills) */
+    .status-badge{
+      display:inline-block;
+      padding:6px 12px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:900;
+    }
+    .status-pending{ background:#fef3c7; color:#92400e; }
+    .status-processing{ background:#bfdbfe; color:#1e40af; }
+    .status-shipped{ background:#d1d5db; color:#1f2937; }
+    .status-delivered{ background:#d1fae5; color:#065f46; }
+    .status-confirmed{ background:#c7d2fe; color:#3730a3; }
+
+    /* Modal */
+    .modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.5);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      z-index:1000;
+    }
+    .modal.show{ display:flex; }
+    .modal-card{
+      width:min(820px,100%);
+      background:#fff;
+      border-radius:14px;
+      padding:22px;
+      box-shadow:0 10px 30px rgba(0,0,0,.2);
+    }
+    .modal-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:14px;
+    }
+    .modal-title{
+      font-size:18px;
+      font-weight:1000;
+      color:#111;
+    }
+    .x{
+      border:none;
+      background:#f3f4f6;
+      padding:8px 12px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:1000;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    .field{
+      border:1px solid #eef2f7;
+      border-radius:12px;
+      padding:12px;
+      background:#fff;
+    }
+    .field .label2{ font-size:12px; color:#777; margin-bottom:6px; font-weight:800; }
+    .field .value{ font-size:14px; color:#111; font-weight:900; word-break:break-word; }
+
+    .tracking-box{
+      padding:10px;
+      border-radius:10px;
+      border:2px solid #0ea5e9;
+      background:#e0f2fe;
+      color:#0369a1;
+      font-weight:1000;
+    }
+    .tracking-muted{
+      padding:10px;
+      border-radius:10px;
+      border:1px solid #d1d5db;
+      background:#f3f4f6;
+      color:#999;
+      font-weight:900;
+    }
+
+    .modal-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:16px;
+    }
+
+    @media (max-width: 760px){
+      .grid{ grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Optional: If you have navbar partial -->
+  <%- include('partials/navbar') %>
+
+  <div class="container">
+    <div class="page-top">
+      <div>
+        <h1>Seller Portal</h1>
+        <div class="page-sub">Manage orders and update shipment status for buyer visibility.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Seller Contract Address</label>
+      <div class="mono" style="padding:12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:12px;">
+        <%= sellerContractAddress %>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Orders Submitted by Buyers</h2>
+
+      <!-- ✅ Filtering pills added -->
+      <div class="filter-section">
+        <button class="filter-btn active" onclick="filterOrders('all', event)">All</button>
+        <button class="filter-btn" onclick="filterOrders('pending', event)">Pending</button>
+        <button class="filter-btn" onclick="filterOrders('processing', event)">Processing</button>
+        <button class="filter-btn" onclick="filterOrders('shipped', event)">Shipped</button>
+        <button class="filter-btn" onclick="filterOrders('delivered', event)">Delivered</button>
+        <button class="filter-btn" onclick="filterOrders('confirmed', event)">Confirmed</button>
+      </div>
+
+      <div id="statusMessage"></div>
+
+      <div id="ordersContainer" style="margin-top:12px;">
+        <p style="color:#777;">Loading orders...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Detail Modal -->
+  <div id="orderModal" class="modal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title">Order Details</div>
+        <button class="x" onclick="closeModal()">✕</button>
+      </div>
+
+      <div class="grid">
+        <div class="field">
+          <div class="label2">Order ID</div>
+          <div class="value" id="modalOrderId">-</div>
+        </div>
+        <div class="field">
+          <div class="label2">Current Status</div>
+          <div class="value" id="modalOrderStatus">-</div>
+        </div>
+
+        <div class="field">
+          <div class="label2">Product</div>
+          <div class="value" id="modalProductName">-</div>
+        </div>
+        <div class="field">
+          <div class="label2">Price (ETH)</div>
+          <div class="value" id="modalProductPrice">-</div>
+        </div>
+
+        <div class="field">
+          <div class="label2">Buyer Name</div>
+          <div class="value" id="modalBuyerName">-</div>
+        </div>
+        <div class="field">
+          <div class="label2">Delivery Address</div>
+          <div class="value" id="modalDeliveryAddress">-</div>
+        </div>
+
+        <div class="field">
+          <div class="label2">Buyer Address</div>
+          <div class="value mono" id="modalBuyerAddress">-</div>
+          <div style="margin-top:10px;">
+            <button class="btn btn-ghost" onclick="copyAddress(document.getElementById('modalBuyerAddress').textContent)">Copy</button>
+          </div>
+        </div>
+        <div class="field">
+          <div class="label2">Paid?</div>
+          <div class="value" id="modalPaidStatus">-</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div style="font-size:12px; color:#777; font-weight:800; margin-bottom:8px;">Tracking Number</div>
+        <div id="modalTrackingNumber" class="mono tracking-muted">-</div>
+      </div>
+
+      <div style="margin-top:18px;">
+        <div style="font-size:12px; color:#777; font-weight:800; margin-bottom:8px;">Update Status</div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="updateOrderStatus(1)">Mark Processing</button>
+          <button class="btn btn-primary" onclick="updateOrderStatus(2)">Mark Shipped (auto tracking)</button>
+          <button class="btn btn-primary" onclick="updateOrderStatus(3)">Mark Delivered</button>
+        </div>
+      </div>
+
+      <div id="modalMessage"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <script>
+    let web3;
+    let orderContract;
+    let sellerContract;
+    let userAccount;
+    let selectedOrderId = null;
+
+    // ✅ NEW: filtering cache
+    let allOrdersCache = [];
+    let currentFilter = 'all';
+
+    const orderContractABI = <%- orderContractABI %>;
+    const orderContractData = <%- orderContractData %>;
+    const sellerContractABI = <%- sellerContractABI %>;
+    const sellerContractData = <%- sellerContractData %>;
+
+    const statusMap = { '0':'Pending','1':'Processing','2':'Shipped','3':'Delivered','4':'Confirmed' };
+
+    // ✅ Delivery-style status badge classes
+    const statusClasses = {
+      '0': 'status-badge status-pending',
+      '1': 'status-badge status-processing',
+      '2': 'status-badge status-shipped',
+      '3': 'status-badge status-delivered',
+      '4': 'status-badge status-confirmed'
+    };
+
+    function filterOrders(filter, event) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      if (event && event.target) event.target.classList.add('active');
+      renderOrdersTable();
+    }
+
+    async function init() {
+      try {
+        web3 = new Web3('http://127.0.0.1:7545');
+        const accounts = await web3.eth.getAccounts();
+        userAccount = accounts[0];
+
+        // Initialize order contract
+        const orderDeployedNetwork = orderContractData.networks[5777];
+        if (!orderDeployedNetwork) {
+          showMessage('Order contract not deployed on Ganache (5777).', 'error');
+          return;
+        }
+        orderContract = new web3.eth.Contract(orderContractABI, orderDeployedNetwork.address);
+
+        // Initialize seller contract (optional)
+        const sellerDeployedNetwork = sellerContractData.networks[5777];
+        if (sellerDeployedNetwork) {
+          sellerContract = new web3.eth.Contract(sellerContractABI, sellerDeployedNetwork.address);
+        }
+
+        await loadAllOrders();
+      } catch (err) {
+        console.error(err);
+        showMessage('Failed to initialize Web3: ' + err.message, 'error');
+      }
+    }
+
+    // ✅ Updated: load orders into cache then render via filter
+    async function loadAllOrders() {
+      try {
+        const orderContainer = document.getElementById('ordersContainer');
+        orderContainer.innerHTML = '<p style="color:#777;">Loading orders...</p>';
+
+        const orderCount = await orderContract.methods.getOrderCount().call();
+        const count = Number(orderCount);
+
+        if (count === 0) {
+          allOrdersCache = [];
+          orderContainer.innerHTML = '<p style="color:#777;">No orders yet.</p>';
+          return;
+        }
+
+        allOrdersCache = [];
+
+        for (let i = 1; i <= count; i++) {
+          try {
+            const order = await orderContract.methods.getOrder(i).call();
+            const priceInETH = web3.utils.fromWei(order.totalAmount, 'ether');
+
+            allOrdersCache.push({
+              orderId: i,
+              buyer: order.buyer,
+              productName: order.productName,
+              priceEth: priceInETH,
+              statusCode: String(order.status),
+              statusText: statusMap[String(order.status)] || 'Unknown',
+              paid: order.isPaid ? 'Yes' : 'No'
+            });
+          } catch (err) {
+            console.error(`Error loading order ${i}:`, err);
+          }
+        }
+
+        // newest first
+        allOrdersCache.sort((a, b) => b.orderId - a.orderId);
+
+        renderOrdersTable();
+      } catch (err) {
+        console.error(err);
+        showMessage('Failed to load orders: ' + err.message, 'error');
+      }
+    }
+
+    function renderOrdersTable() {
+      const orderContainer = document.getElementById('ordersContainer');
+
+      let list = allOrdersCache;
+      if (currentFilter !== 'all') {
+        list = allOrdersCache.filter(o => o.statusText.toLowerCase() === currentFilter);
+      }
+
+      if (!list.length) {
+        orderContainer.innerHTML = `<p style="color:#777;">No ${currentFilter === 'all' ? '' : currentFilter + ' '}orders.</p>`;
+        return;
+      }
+
+      let tableHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Buyer Address</th>
+              <th>Product</th>
+              <th>Price (ETH)</th>
+              <th>Status</th>
+              <th>Paid</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      for (const o of list) {
+        const statusClass = statusClasses[o.statusCode] || statusClasses['0'];
+
+        tableHTML += `
+          <tr class="order-row" onclick="openOrderModal(${o.orderId})">
+            <td class="order-id">#${o.orderId}</td>
+            <td>
+              <div class="mono">${o.buyer}</div>
+              <button class="btn btn-ghost" style="margin-top:8px;"
+                onclick="copyAddress('${o.buyer}'); event.stopPropagation();">
+                Copy
+              </button>
+            </td>
+            <td>${o.productName}</td>
+            <td>${o.priceEth}</td>
+            <td><span class="${statusClass}">${o.statusText}</span></td>
+            <td>${o.paid}</td>
+            <td>
+              <button class="btn btn-primary"
+                onclick="openOrderModal(${o.orderId}); event.stopPropagation();">
+                Manage
+              </button>
+            </td>
+          </tr>
+        `;
+      }
+
+      tableHTML += `</tbody></table>`;
+      orderContainer.innerHTML = tableHTML;
+    }
+
+    async function openOrderModal(orderId) {
+      try {
+        selectedOrderId = orderId;
+        const order = await orderContract.methods.getOrder(orderId).call();
+        const priceInETH = web3.utils.fromWei(order.totalAmount, 'ether');
+        const statusText = statusMap[String(order.status)] || 'Unknown';
+        const statusClass = statusClasses[String(order.status)] || statusClasses['0'];
+
+        document.getElementById('modalOrderId').textContent = '#' + orderId;
+        document.getElementById('modalOrderStatus').innerHTML = `<span class="${statusClass}">${statusText}</span>`;
+        document.getElementById('modalProductName').textContent = order.productName || '-';
+        document.getElementById('modalProductPrice').textContent = (priceInETH || '-') + ' ETH';
+        document.getElementById('modalBuyerName').textContent = order.buyerName || '-';
+        document.getElementById('modalDeliveryAddress').textContent = order.deliveryAddress || '-';
+        document.getElementById('modalBuyerAddress').textContent = order.buyer || '-';
+
+        const paidStatusEl = document.getElementById('modalPaidStatus');
+        if (order.isPaid) {
+          paidStatusEl.textContent = '✓ Yes - Paid';
+          paidStatusEl.style.color = '#065f46';
+          paidStatusEl.style.fontWeight = '900';
+        } else {
+          paidStatusEl.textContent = '✗ No - Unpaid';
+          paidStatusEl.style.color = '#991b1b';
+          paidStatusEl.style.fontWeight = '900';
+        }
+
+        const trackingEl = document.getElementById('modalTrackingNumber');
+        try {
+          const trackingNumber = await orderContract.methods.getTrackingNumber(orderId).call({ from: userAccount });
+          if (trackingNumber && trackingNumber.trim() !== '') {
+            trackingEl.textContent = trackingNumber;
+            trackingEl.className = 'mono tracking-box';
+          } else {
+            trackingEl.textContent = 'Not shipped yet';
+            trackingEl.className = 'mono tracking-muted';
+          }
+        } catch (e) {
+          trackingEl.textContent = 'Not available';
+          trackingEl.className = 'mono tracking-muted';
+        }
+
+        document.getElementById('modalMessage').innerHTML = '';
+        document.getElementById('orderModal').classList.add('show');
+      } catch (err) {
+        console.error(err);
+        alert('Failed to load order details: ' + err.message);
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('orderModal').classList.remove('show');
+      selectedOrderId = null;
+    }
+
+    async function updateOrderStatus(statusCode) {
+      try {
+        if (!selectedOrderId) return showModalMessage('No order selected.', 'error');
+        if (!orderContract || !userAccount) return showModalMessage('Web3 not ready. Refresh the page.', 'error');
+
+        const statusText = statusMap[statusCode] || 'Unknown';
+        let description = `Seller updated status to ${statusText}`;
+
+        if (statusCode === 2) {
+          const randomPart = Math.random().toString(36).substring(2, 12).toUpperCase();
+          const timestamp = Date.now().toString().slice(-6);
+          const trackingNumber = `TRACK-${randomPart}${timestamp}`;
+          description = `Order shipped with tracking number: ${trackingNumber}`;
+
+          await orderContract.methods
+            .updateOrderStatusWithTracking(selectedOrderId, statusCode, description, trackingNumber)
+            .send({ from: userAccount, gas: 500000 });
+
+          showModalMessage(`Status updated to ${statusText}! Tracking: ${trackingNumber}`, 'success');
+        } else {
+          await orderContract.methods
+            .updateOrderStatus(selectedOrderId, statusCode, description)
+            .send({ from: userAccount, gas: 500000 });
+
+          showModalMessage(`Status updated to ${statusText}!`, 'success');
+        }
+
+        setTimeout(async () => {
+          await openOrderModal(selectedOrderId);
+          await loadAllOrders(); // refresh table + respect current filter
+        }, 800);
+
+      } catch (err) {
+        console.error(err);
+        showModalMessage('Failed to update status: ' + err.message, 'error');
+      }
+    }
+
+    function showMessage(message, type) {
+      const box = document.getElementById('statusMessage');
+      box.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+    }
+
+    function showModalMessage(message, type) {
+      const box = document.getElementById('modalMessage');
+      box.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+    }
+
+    function copyAddress(addr) {
+      navigator.clipboard.writeText(addr).catch(err => console.error('Copy failed:', err));
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById('orderModal');
+      if (event.target === modal) closeModal();
+    };
+
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>
