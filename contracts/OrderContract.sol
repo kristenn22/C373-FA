@@ -49,6 +49,7 @@ contract OrderContract {
 
     event OrderCreated(uint orderId, address buyer, uint amount);
     event OrderPaid(uint orderId, address buyer, uint amount);
+    event PaymentHeld(uint orderId, address payer, uint amount);
     event OrderStatusUpdated(uint orderId, OrderStatus status);
     event DeliveryConfirmed(uint orderId, address buyer);
     event TrackingNumberUpdated(uint orderId, string trackingNumber);
@@ -83,7 +84,7 @@ contract OrderContract {
             totalAmount: _price,
             status: OrderStatus.Pending,
             timestamp: block.timestamp,
-            isPaid: false,
+            isPaid: true,
             isReleased: false,
             deliveredAt: 0
         });
@@ -99,6 +100,7 @@ contract OrderContract {
         
         emit OrderCreated(orderCount, msg.sender, _price);
         emit OrderPaid(orderCount, msg.sender, msg.value);
+        emit PaymentHeld(orderCount, msg.sender, msg.value);
         return orderCount;
     }
 
@@ -120,6 +122,7 @@ contract OrderContract {
         }));
         
         emit OrderPaid(_orderId, msg.sender, msg.value);
+        emit PaymentHeld(_orderId, msg.sender, msg.value);
         emit OrderStatusUpdated(_orderId, OrderStatus.Processing);
     }
 
@@ -197,6 +200,8 @@ contract OrderContract {
         require(order.status == OrderStatus.Delivered, "Order not yet delivered");
         
         if (_received) {
+            require(order.isPaid, "Payment not held in escrow");
+            require(!order.isReleased, "Payment already released");
             order.status = OrderStatus.Confirmed;
             order.isPaid = true;
             if (order.deliveredAt == 0) {
@@ -225,6 +230,13 @@ contract OrderContract {
                 timestamp: block.timestamp
             }));
         }
+    }
+
+    // View escrow/payment status for an order
+    function getEscrowStatus(uint _orderId) public view returns (bool isEscrowed, bool isReleased, uint amount) {
+        require(_orderId > 0 && _orderId <= orderCount, "Invalid order ID");
+        Order memory order = orders[_orderId];
+        return (order.isPaid, order.isReleased, order.totalAmount);
     }
 
     // Get order details

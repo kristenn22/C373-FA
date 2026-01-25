@@ -393,10 +393,10 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.isLoggedIn) {
-                    showSuccess('Login successful! Redirecting to seller page...');
+                    showSuccess('Login successful! Redirecting to dashboard...');
                     setTimeout(() => {
-                        window.location.href = '/seller';
-                    }, 1200);
+                        window.location.href = '/user-home';
+                    }, 1500);
                 } else {
                     showError(data.message || 'Login failed');
                     loginBtn.disabled = false;

@@ -199,6 +199,22 @@
             color: #991b1b;
         }
 
+        #paymentStatus.held {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        #paymentStatus.released {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .payment-note {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+
         .tracking-history {
             margin-top: 30px;
         }
@@ -367,7 +383,10 @@
                 
                 <div class="details-item">
                     <span class="details-label">Payment Status:</span>
-                    <span class="details-value" id="paymentStatus">Paid</span>
+                    <span class="details-value" style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+                        <span id="paymentStatus">Paid</span>
+                        <span id="paymentNote" class="payment-note"></span>
+                    </span>
                 </div>
 
                 <div class="details-item">
@@ -463,12 +482,19 @@
                 document.getElementById('orderStatus').textContent = statusMap[order.status];
                 
                 const paymentStatusEl = document.getElementById('paymentStatus');
-                if (order.isPaid) {
-                    paymentStatusEl.textContent = 'Paid';
-                    paymentStatusEl.className = 'paid';
+                const paymentNoteEl = document.getElementById('paymentNote');
+                if (order.isPaid && !order.isReleased) {
+                    paymentStatusEl.textContent = 'Held in Digital Safe';
+                    paymentStatusEl.className = 'held';
+                    paymentNoteEl.textContent = 'Seller sees payment confirmed but funds stay locked until you confirm delivery.';
+                } else if (order.isPaid && order.isReleased) {
+                    paymentStatusEl.textContent = 'Released to Seller';
+                    paymentStatusEl.className = 'released';
+                    paymentNoteEl.textContent = 'Payment has left the digital safe after your confirmation.';
                 } else {
                     paymentStatusEl.textContent = 'Unpaid';
                     paymentStatusEl.className = 'unpaid';
+                    paymentNoteEl.textContent = 'No payment detected for this order yet.';
                 }
                 
                 const orderDate = new Date(Number(order.timestamp) * 1000);

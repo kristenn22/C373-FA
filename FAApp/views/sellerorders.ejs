@@ -393,6 +393,7 @@
                                 buyer: order.buyer,
                                 totalAmount: String(order.totalAmount) || '0',
                                 isPaid: order.isPaid || false,
+                                isReleased: order.isReleased || false,
                                 status: statusMap[order.status] || 'Unknown',
                                 statusCode: Number(order.status),
                                 timestamp: Number(order.timestamp),
@@ -453,9 +454,12 @@
             filteredOrders.forEach(order => {
                 const orderDate = new Date(order.timestamp * 1000);
                 const statusClass = 'status-' + order.status.toLowerCase().replace(' ', '-');
-                const paymentBadge = order.isPaid 
-                    ? '<span style="background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">✓ Paid</span>'
-                    : '<span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">✗ Unpaid</span>';
+                let paymentBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">Unpaid</span>';
+                if (order.isPaid && !order.isReleased) {
+                    paymentBadge = '<span style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">Payment Held (Digital Safe)</span>';
+                } else if (order.isPaid && order.isReleased) {
+                    paymentBadge = '<span style="background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">Released to Seller</span>';
+                }
 
                 let reviewBadge = '<span style="background: #e5e7eb; color: #666; padding: 4px 10px; border-radius: 4px; font-size: 12px;">No review</span>';
                 if (order.review) {
