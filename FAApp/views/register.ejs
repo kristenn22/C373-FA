@@ -283,7 +283,6 @@
             border-radius: 8px;
             margin-bottom: 20px;
             font-size: 14px;
-            display: none;
         }
 
         .success-message {
@@ -293,7 +292,6 @@
             border-radius: 8px;
             margin-bottom: 20px;
             font-size: 14px;
-            display: none;
         }
 
         @media (max-width: 600px) {
@@ -338,15 +336,19 @@
         <!-- Messages -->
         <div class="error-message" id="errorMessage"></div>
         <div class="success-message" id="successMessage"></div>
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="error-message"><%= error %></div>
+        <% } %>
 
         <!-- Register Form -->
-        <form id="registerForm" onsubmit="handleRegister(event)">
+        <form id="registerForm" method="POST" action="/signup">
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label" for="firstName">First Name</label>
                     <input 
                         type="text" 
-                        id="firstName" 
+                        id="firstName"
+                        name="firstName" 
                         class="form-input" 
                         placeholder="John"
                     >
@@ -355,7 +357,8 @@
                     <label class="form-label" for="lastName">Last Name</label>
                     <input 
                         type="text" 
-                        id="lastName" 
+                        id="lastName"
+                        name="lastName" 
                         class="form-input" 
                         placeholder="Doe"
                     >
@@ -366,17 +369,27 @@
                 <label class="form-label" for="email">Email Address</label>
                 <input 
                     type="email" 
-                    id="email" 
+                    id="email"
+                        name="email" 
                     class="form-input" 
                     placeholder="your@email.com"
                 >
             </div>
 
             <div class="form-group">
+                <label class="form-label" for="accountType">Account Type</label>
+                <select id="accountType" name="accountType" class="form-input">
+                    <option value="user">User</option>
+                    <option value="seller">Seller</option>
+                </select>
+            </div>
+
+            <div class="form-group">
                 <label class="form-label" for="phone">Phone Number</label>
                 <input 
                     type="tel" 
-                    id="phone" 
+                    id="phone"
+                        name="phone" 
                     class="form-input" 
                     placeholder="+1 (555) 000-0000"
                 >
@@ -387,9 +400,9 @@
                 <input 
                     type="password" 
                     id="password" 
+                    name="password"
                     class="form-input" 
                     placeholder="Minimum 8 characters"
-                    oninput="checkPasswordStrength()"
                 >
                 <div class="password-requirements">
                     <div class="requirement" id="reqLength">
@@ -408,7 +421,8 @@
                 <label class="form-label" for="confirmPassword">Confirm Password</label>
                 <input 
                     type="password" 
-                    id="confirmPassword" 
+                    id="confirmPassword"
+                        name="confirmPassword" 
                     class="form-input" 
                     placeholder="Re-enter your password"
                 >
@@ -424,183 +438,10 @@
             <button type="submit" class="btn-register">Create Account</button>
         </form>
 
-        <!-- Divider -->
-        <div class="divider">or</div>
-
-        <!-- MetaMask Registration -->
-        <button type="button" class="btn-metamask" id="metamaskBtn" onclick="connectMetaMaskRegister()">
-            <span>🦊</span>
-            <span>Sign Up with MetaMask</span>
-        </button>
-
         <!-- Login Link -->
         <div class="login-link">
             Already have an account? <a href="/login">Sign in here</a>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-    <script>
-        // Check password strength
-        function checkPasswordStrength() {
-            const password = document.getElementById('password').value;
-            
-            const reqLength = password.length >= 8;
-            const reqUppercase = /[A-Z]/.test(password);
-            const reqNumber = /[0-9]/.test(password);
-
-            updateRequirement('reqLength', reqLength);
-            updateRequirement('reqUppercase', reqUppercase);
-            updateRequirement('reqNumber', reqNumber);
-        }
-
-        function updateRequirement(id, met) {
-            const elem = document.getElementById(id);
-            if (met) {
-                elem.classList.add('met');
-                elem.querySelector('span').textContent = '✓';
-            } else {
-                elem.classList.remove('met');
-                elem.querySelector('span').textContent = '✗';
-            }
-        }
-
-        // Handle registration
-        function handleRegister(event) {
-            event.preventDefault();
-            
-            const firstName = document.getElementById('firstName').value.trim();
-            const lastName = document.getElementById('lastName').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const phone = document.getElementById('phone').value.trim();
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const termsAccepted = document.getElementById('termsCheckbox').checked;
-
-            // Validation
-            if (!firstName || !lastName || !email || !phone || !password || !confirmPassword) {
-                showError('Please fill in all fields');
-                return;
-            }
-
-            if (password.length < 8) {
-                showError('Password must be at least 8 characters');
-                return;
-            }
-
-            if (password !== confirmPassword) {
-                showError('Passwords do not match');
-                return;
-            }
-
-            if (!termsAccepted) {
-                showError('You must accept the terms and conditions');
-                return;
-            }
-
-            if (!email.includes('@')) {
-                showError('Please enter a valid email address');
-                return;
-            }
-
-            // Submit registration
-            const registerBtn = document.querySelector('.btn-register');
-            registerBtn.disabled = true;
-
-            setTimeout(() => {
-                console.log('Registration attempt:', { firstName, lastName, email, phone });
-                
-                showSuccess('Account created successfully! Redirecting to login...');
-                
-                setTimeout(() => {
-                    window.location.href = '/login';
-                }, 2000);
-            }, 1000);
-        }
-
-        // Connect MetaMask for registration
-        async function connectMetaMaskRegister() {
-            if (!window.ethereum) {
-                showError('MetaMask is not installed. Please install it to continue.');
-                return;
-            }
-
-            const btn = document.getElementById('metamaskBtn');
-            btn.disabled = true;
-
-            try {
-                const accounts = await window.ethereum.request({
-                    method: 'eth_requestAccounts'
-                });
-
-                const account = accounts[0];
-                console.log('Connected account:', account);
-
-                // Load Web3 and contract
-                const web3 = new Web3(window.ethereum);
-                const contractData = await fetch('/build/OrderContract.json').then(r => r.json());
-                const networkId = await web3.eth.net.getId();
-                const deployedNetwork = contractData.networks[networkId];
-                
-                if (!deployedNetwork) {
-                    showError('Please connect to the correct network (Ganache on port 7545)');
-                    btn.disabled = false;
-                    return;
-                }
-
-                // Get order count
-                const contract = new web3.eth.Contract(contractData.abi, deployedNetwork.address);
-                const orderCount = await contract.methods.getOrderCount().call();
-                const orderCountValue = orderCount.toString();
-
-                // Send connection data to backend
-                const response = await fetch('/web3ConnectData', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        contractAddress: deployedNetwork.address,
-                        acct: account,
-                        orderCnt: orderCountValue
-                    })
-                });
-
-                if (response.ok) {
-                    showSuccess('MetaMask wallet connected! Creating account...');
-                    setTimeout(() => {
-                        window.location.href = '/products';
-                    }, 1500);
-                } else {
-                    showError('Failed to register with MetaMask');
-                    btn.disabled = false;
-                }
-            } catch (error) {
-                console.error('MetaMask registration error:', error);
-                showError('Failed to connect MetaMask: ' + error.message);
-                btn.disabled = false;
-            }
-        }
-
-        // Show error message
-        function showError(message) {
-            const errorDiv = document.getElementById('errorMessage');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-
-            setTimeout(() => {
-                errorDiv.style.display = 'none';
-            }, 5000);
-        }
-
-        // Show success message
-        function showSuccess(message) {
-            const successDiv = document.getElementById('successMessage');
-            successDiv.textContent = message;
-            successDiv.style.display = 'block';
-        }
-
-        // MetaMask event listeners are omitted on the register page to avoid reload loops.
-    </script>
 </body>
 </html>

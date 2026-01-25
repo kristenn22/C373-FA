@@ -2,10 +2,12 @@ const express = require('express');
 const {Web3} = require('web3');
 const fs = require("fs");
 const path = require('path');
+const crypto = require('crypto');
 
 // Load contract files
 const OrderContract = require('./public/build/OrderContract.json');
 const SellerOrderContract = require('./public/build/SellerOrderContract.json');
+const UserRegistry = require('./public/build/UserRegistry.json');
 
 const app = express();
 //Set up view engine
@@ -23,8 +25,11 @@ var noOfOrders = 0;
 var loading = true;  
 var orderContractInfo;
 var sellerContractInfo;
+var userRegistryInfo;
 var userCart = {}; // Store cart items with account as key
 var loggedInUsers = {}; // Track logged in users
+const adminSessions = new Map();
+const userSessions = new Map();
 
 // Check if user is signed in (has account connected)
 function isSignedIn() {
@@ -32,8 +37,63 @@ function isSignedIn() {
 }
 
 function isAdmin() {
-    // Any connected Ganache account is admin
     return isSignedIn();
+}
+
+function normalizeEmail(value) {
+    return value.trim().toLowerCase();
+}
+
+function parseCookies(req) {
+    const header = req.headers.cookie || '';
+    return header.split(';').reduce((acc, pair) => {
+        const [key, ...rest] = pair.trim().split('=');
+        if (!key) {
+            return acc;
+        }
+        acc[key] = decodeURIComponent(rest.join('='));
+        return acc;
+    }, {});
+}
+
+function getAdminSession(req) {
+    const cookies = parseCookies(req);
+    const token = cookies.admin_session;
+    if (!token) {
+        return null;
+    }
+    return adminSessions.get(token) || null;
+}
+
+function getUserSession(req) {
+    const cookies = parseCookies(req);
+    const token = cookies.user_session;
+    if (!token) {
+        return null;
+    }
+    return userSessions.get(token) || null;
+}
+
+async function verifyCredentials(email, password) {
+    if (!userRegistryInfo) {
+        throw new Error('User registry not available');
+    }
+    const emailHash = Web3.utils.keccak256(normalizeEmail(email));
+    const passwordHash = Web3.utils.keccak256(password);
+    const result = await userRegistryInfo.methods.verifyCredentials(emailHash, passwordHash).call();
+    return { ...result, emailHash };
+}
+
+function createAdminSession(emailHash) {
+    const token = crypto.randomBytes(32).toString('hex');
+    adminSessions.set(token, { emailHash, createdAt: Date.now() });
+    return token;
+}
+
+function createUserSession(emailHash, role) {
+    const token = crypto.randomBytes(32).toString('hex');
+    userSessions.set(token, { emailHash, role, createdAt: Date.now() });
+    return token;
 }
 
 
@@ -86,6 +146,13 @@ async function loadBlockchainData() {
             sellerContractInfo = new web3.eth.Contract(SellerOrderContract.abi, sellerNetworkData.address)
             console.log('Seller contract initialized at:', sellerNetworkData.address);
         }
+
+        // Initialize UserRegistry contract if available
+        const userNetworkData = UserRegistry.networks[networkId];
+        if (userNetworkData) {
+            userRegistryInfo = new web3.eth.Contract(UserRegistry.abi, userNetworkData.address);
+            console.log('User registry initialized at:', userNetworkData.address);
+        }
         
         // Get order count from contract
         const cnt = await orderContractInfo.methods.getOrderCount().call();
@@ -120,7 +187,7 @@ function isUserLoggedIn(userAccount) {
 
 // Helper function to pass common data to all views
 function getCommonData(req) {
-    const isLoggedIn = isUserLoggedIn(account);
+    const isLoggedIn = Boolean(getUserSession(req) || getAdminSession(req));
     return {
         acct: account,
         loading: loading,
@@ -140,6 +207,21 @@ app.get('/', async(req, res) => {
         res.status(500).send('Server error');
     }
 });
+// Get started - redirect based on sign-in status
+app.get('/get-started', (req, res) => {
+    const userSession = getUserSession(req);
+    if (!userSession) {
+        return res.redirect('/signup');
+    }
+    if (String(userSession.role) === '3') {
+        return res.redirect('/admin');
+    }
+    if (String(userSession.role) === '2') {
+        return res.redirect('/seller');
+    }
+    return res.redirect('/user-home');
+});
+
 // Register page
 app.get('/register', (req, res) => {
     try {
@@ -150,13 +232,79 @@ app.get('/register', (req, res) => {
     }
 });
 
-// Login page
-app.get('/login', async(req, res) => {
+// Sign up page
+app.get('/signup', (req, res) => {
+    try {
+        res.render('register', getCommonData(req));
+    } catch (error) {
+        console.error('Error in signup route:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+// Handle sign up submission (email + password only)
+app.post('/signup', async (req, res) => {
+    try {
+        const email = (req.body.email || '').trim();
+        const password = req.body.password || '';
+        const confirmPassword = req.body.confirmPassword || '';
+        const accountType = (req.body.accountType || 'user').trim().toLowerCase();
+
+        if (!email || !password || !confirmPassword) {
+            return res.status(400).render('register', {
+                ...getCommonData(req),
+                error: 'Email and password are required.'
+            });
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).render('register', {
+                ...getCommonData(req),
+                error: 'Passwords do not match.'
+            });
+        }
+
+        if (!userRegistryInfo) {
+            return res.status(500).render('register', {
+                ...getCommonData(req),
+                error: 'User registry not available.'
+            });
+        }
+
+        const roleMap = { user: 1, seller: 2 };
+        const role = roleMap[accountType];
+        if (!role) {
+            return res.status(400).render('register', {
+                ...getCommonData(req),
+                error: 'Please choose a valid account type.'
+            });
+        }
+
+        const emailHash = Web3.utils.keccak256(normalizeEmail(email));
+        const passwordHash = Web3.utils.keccak256(password);
+
+        await userRegistryInfo.methods
+            .registerUserByEmailWithRole(emailHash, passwordHash, role)
+            .send({ from: account, gas: 300000 });
+
+        return res.redirect('/login');
+    } catch (error) {
+        console.error('Signup error:', error);
+        return res.status(500).render('register', {
+            ...getCommonData(req),
+            error: error.message || 'Failed to sign up.'
+        });
+    }
+});
+
+// Login Page 
+ app.get('/login', async(req, res) => {
     try {
         res.render('login', {
             acct: account,
             loading: false,
-            productData: null
+            productData: null,
+            error: null
         });
     } catch (error) {
         console.error('Error in login route:', error);
@@ -164,56 +312,119 @@ app.get('/login', async(req, res) => {
     }
 });
 
-// Handle login form submission
-app.post('/login', (req, res) => {
+// Handle login form submission (email + password only)
+app.post('/login', async (req, res) => {
     try {
-        const { acct } = req.body;
-        
-        // Set the account from frontend if provided
-        if (acct && acct.trim() !== '') {
-            account = acct;
-            loggedInUsers[account] = true;
-            res.json({ success: true, message: 'Logged in successfully', isLoggedIn: true });
-        } else if (account && account.trim() !== '') {
-            // Use existing account if no account provided
-            loggedInUsers[account] = true;
-            res.json({ success: true, message: 'Logged in successfully', isLoggedIn: true });
-        } else {
-            res.status(401).json({ success: false, message: 'No account connected. Please use MetaMask login.' });
+        const email = (req.body.email || '').trim();
+        const password = req.body.password || '';
+
+        if (!email || !password) {
+            return res.status(400).render('login', {
+                acct: account,
+                loading: false,
+                productData: null,
+                error: 'Email and password are required.'
+            });
         }
+
+        const result = await verifyCredentials(email, password);
+        if (!result.isValid) {
+            return res.status(401).render('login', {
+                acct: account,
+                loading: false,
+                productData: null,
+                error: 'Invalid credentials.'
+            });
+        }
+
+        const token = createUserSession(result.emailHash, result.role);
+        res.setHeader('Set-Cookie', `user_session=${token}; HttpOnly; SameSite=Lax; Path=/`);
+
+        if (String(result.role) === '3') {
+            return res.redirect('/admin');
+        }
+        if (String(result.role) === '2') {
+            return res.redirect('/seller');
+        }
+        return res.redirect('/user-home');
     } catch (error) {
         console.error('Error in login post route:', error);
-        res.status(500).send('Server error');
-    }
-});
-
-// Register page
-app.get('/register', async(req, res) => {
-    try {
-        res.render('regsiter', {
+        return res.status(500).render('login', {
             acct: account,
-            loading: loading
+            loading: false,
+            productData: null,
+            error: 'Failed to login.'
         });
-    } catch (error) {
-        console.error('Error in register route:', error);
-        res.status(500).send('Server error');
     }
 });
 
-// Sign up page
-app.get('/signup', async(req, res) => {
+// Admin login page (email + password only)
+app.get('/admin-login', (req, res) => {
+    res.render('admin-login', {
+        error: null
+    });
+});
+
+// Handle admin login submission
+app.post('/admin-login', async (req, res) => {
     try {
-        res.render('regsiter', getCommonData(req));
+        const email = (req.body.email || '').trim();
+        const password = req.body.password || '';
+
+        if (!email || !password) {
+            return res.status(400).render('admin-login', {
+                error: 'Email and password are required.'
+            });
+        }
+
+        const result = await verifyCredentials(email, password);
+        if (!result.isValid || String(result.role) !== '3') {
+            return res.status(401).render('admin-login', {
+                error: 'Invalid admin credentials.'
+            });
+        }
+
+        const adminToken = createAdminSession(result.emailHash);
+        const userToken = createUserSession(result.emailHash, result.role);
+        res.setHeader('Set-Cookie', [
+            `admin_session=${adminToken}; HttpOnly; SameSite=Lax; Path=/`,
+            `user_session=${userToken}; HttpOnly; SameSite=Lax; Path=/`
+        ]);
+        return res.redirect('/admin');
     } catch (error) {
-        console.error('Error in signup route:', error);
-        res.status(500).send('Server error');
+        console.error('Admin login error:', error);
+        return res.status(500).render('admin-login', {
+            error: 'Failed to login. Try again.'
+        });
     }
+});
+
+// Admin logout
+app.get('/admin-logout', (req, res) => {
+    const cookies = parseCookies(req);
+    if (cookies.admin_session) {
+        adminSessions.delete(cookies.admin_session);
+    }
+    if (cookies.user_session) {
+        userSessions.delete(cookies.user_session);
+    }
+    res.setHeader('Set-Cookie', [
+        'admin_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0',
+        'user_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'
+    ]);
+    res.redirect('/admin-login');
 });
 
 // User home page (requires login)
 app.get('/user-home', (req, res) => {
-    if (!isSignedIn()) {
+    const userSession = getUserSession(req);
+    if (!userSession && !isSignedIn()) {
         return res.redirect('/login');
+    }
+
+    const role = userSession ? userSession.role : '0';
+    if (String(role) === '0') {
+        return res.status(403).send('Forbidden');
     }
 
     return res.render('user-home', getCommonData(req));
@@ -221,24 +432,118 @@ app.get('/user-home', (req, res) => {
 
 // Admin page (requires admin account)
 app.get('/admin', (req, res) => {
-    if (!isSignedIn()) {
-        return res.redirect('/login');
+    const adminSession = getAdminSession(req);
+    const userSession = getUserSession(req);
+
+    if (adminSession || (userSession && String(userSession.role) === '3')) {
+        return res.render('admin', getCommonData(req));
     }
 
-    if (!isAdmin()) {
-        return res.status(403).send('Forbidden - Admin access only');
+    return res.redirect('/admin-login');
+});
+
+// Promote user to admin (email + admin session)
+app.post('/admin/promote', async (req, res) => {
+    const adminSession = getAdminSession(req);
+    const userSession = getUserSession(req);
+    if (!adminSession && !(userSession && String(userSession.role) === '3')) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    return res.render('admin', getCommonData(req));
+    const email = (req.body.email || '').trim();
+    if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    if (!userRegistryInfo) {
+        return res.status(500).json({ success: false, message: 'User registry not available' });
+    }
+
+    try {
+        const emailHash = Web3.utils.keccak256(normalizeEmail(email));
+        await userRegistryInfo.methods
+            .setAdminByEmailHash(emailHash)
+            .send({ from: account, gas: 300000 });
+        return res.json({ success: true });
+    } catch (error) {
+        console.error('Admin promote error:', error);
+        return res.status(500).json({ success: false, message: error.message || 'Promotion failed' });
+    }
+});
+
+// Allow seller to confirm delivery
+app.post('/admin/allow-seller', async (req, res) => {
+    const adminSession = getAdminSession(req);
+    const userSession = getUserSession(req);
+    if (!adminSession && !(userSession && String(userSession.role) === '3')) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const sellerAddress = (req.body.sellerAddress || '').trim();
+    if (!sellerAddress) {
+        return res.status(400).json({ success: false, message: 'Seller address is required' });
+    }
+
+    if (!orderContractInfo) {
+        return res.status(500).json({ success: false, message: 'Order contract not available' });
+    }
+
+    try {
+        await orderContractInfo.methods
+            .setSellerConfirmAllowed(sellerAddress, true)
+            .send({ from: account, gas: 200000 });
+        return res.json({ success: true });
+    } catch (error) {
+        console.error('Allow seller error:', error);
+        return res.status(500).json({ success: false, message: error.message || 'Failed to allow seller' });
+    }
+});
+
+// List users for admin dashboard
+app.get('/admin/users', async (req, res) => {
+    const adminSession = getAdminSession(req);
+    const userSession = getUserSession(req);
+    if (!adminSession && !(userSession && String(userSession.role) === '3')) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (!userRegistryInfo) {
+        return res.status(500).json({ success: false, message: 'User registry not available' });
+    }
+
+    try {
+        const count = await userRegistryInfo.methods.getUserCount().call();
+        const total = Number(count);
+        const limit = Math.min(total, 200);
+        const users = [];
+        for (let i = 0; i < limit; i++) {
+            const user = await userRegistryInfo.methods.getUserByIndex(i).call();
+            users.push({
+                emailHash: user.emailHash,
+                role: String(user.role),
+                wallet: user.wallet
+            });
+        }
+
+        return res.json({ success: true, users });
+    } catch (error) {
+        console.error('Admin users error:', error);
+        return res.status(500).json({ success: false, message: error.message || 'Failed to load users' });
+    }
 });
 
 
 // Handle logout
 app.post('/logout', express.json(), async(req, res) => {
     try {
-        const userAccount = account;
-        delete loggedInUsers[userAccount];
-        console.log('User logged out:', userAccount);
+        const cookies = parseCookies(req);
+        if (cookies.user_session) {
+            userSessions.delete(cookies.user_session);
+        }
+        if (cookies.admin_session) {
+            adminSessions.delete(cookies.admin_session);
+        }
+        console.log('User logged out');
         
         res.json({
             success: true,
@@ -668,6 +973,11 @@ app.post('/processCheckout', express.json(), async (req, res) => {
 // Seller side page
 app.get('/seller', async(req, res) => {
     try {
+        const userSession = getUserSession(req);
+        if (!userSession || String(userSession.role) !== '2') {
+            return res.redirect('/login');
+        }
+
         const sellerContractAddress = sellerContractInfo ? sellerContractInfo.options.address : 'Not deployed';
         const data = getCommonData(req);
         res.render('seller', {

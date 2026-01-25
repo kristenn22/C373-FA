@@ -7,6 +7,7 @@ contract OrderContract {
     string public companyName;
     uint public orderCount;
     address payable public owner;
+    mapping(address => bool) public sellerConfirmAllowed;
 
     constructor() {
         orderCount = 0;
@@ -53,6 +54,18 @@ contract OrderContract {
     event OrderStatusUpdated(uint orderId, OrderStatus status);
     event DeliveryConfirmed(uint orderId, address buyer);
     event TrackingNumberUpdated(uint orderId, string trackingNumber);
+    event SellerConfirmAllowed(address seller, bool allowed);
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner");
+        _;
+    }
+
+    function setSellerConfirmAllowed(address seller, bool allowed) external onlyOwner {
+        require(seller != address(0), "Invalid seller");
+        sellerConfirmAllowed[seller] = allowed;
+        emit SellerConfirmAllowed(seller, allowed);
+    }
 
     // Create a new order
     function createOrder(
@@ -196,7 +209,10 @@ contract OrderContract {
     function confirmDelivery(uint _orderId, bool _received) public {
         require(_orderId > 0 && _orderId <= orderCount, "Invalid order ID");
         Order storage order = orders[_orderId];
-        require(msg.sender == order.buyer, "Only buyer can confirm delivery");
+        require(
+            msg.sender == order.buyer || sellerConfirmAllowed[msg.sender],
+            "Not authorized to confirm delivery"
+        );
         require(order.status == OrderStatus.Delivered, "Order not yet delivered");
         
         if (_received) {

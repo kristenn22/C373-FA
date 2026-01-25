@@ -261,7 +261,6 @@
             border-radius: 8px;
             margin-bottom: 20px;
             font-size: 14px;
-            display: none;
         }
 
         .success-message {
@@ -271,7 +270,6 @@
             border-radius: 8px;
             margin-bottom: 20px;
             font-size: 14px;
-            display: none;
         }
 
         @media (max-width: 600px) {
@@ -306,14 +304,18 @@
         <!-- Messages -->
         <div class="error-message" id="errorMessage"></div>
         <div class="success-message" id="successMessage"></div>
+        <% if (error) { %>
+            <div class="error-message"><%= error %></div>
+        <% } %>
 
         <!-- Login Form -->
-        <form id="loginForm" method="POST" action="/login" onsubmit="handleLogin(event)">
+        <form id="loginForm" method="POST" action="/login" >
             <div class="form-group">
                 <label class="form-label" for="email">Email Address</label>
                 <input 
                     type="email" 
-                    id="email" 
+                    id="email"
+                    name="email" 
                     class="form-input" 
                     placeholder="your@email.com"
                 >
@@ -323,7 +325,8 @@
                 <label class="form-label" for="password">Password</label>
                 <input 
                     type="password" 
-                    id="password" 
+                    id="password"
+                    name="password" 
                     class="form-input" 
                     placeholder="Enter your password"
                 >
@@ -340,164 +343,13 @@
             <button type="submit" class="btn-login">Sign In</button>
         </form>
 
-        <!-- Divider -->
-        <div class="divider">or</div>
-
-        <!-- MetaMask Login -->
-        <button type="button" class="btn-metamask" id="metamaskBtn" onclick="connectMetaMask()">
-            <span>🦊</span>
-            <span>Connect MetaMask</span>
-        </button>
-
         <!-- Register Link -->
         <div class="register-link">
             Don't have an account? <a href="/signup">Sign up here</a>
         </div>
+        <div class="register-link">
+            Admin access? <a href="/admin-login">Login here</a>
+        </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-    <script>
-        let connectedAccount = null;
-
-        // Handle traditional login
-        function handleLogin(event) {
-            event.preventDefault();
-            
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const rememberMe = document.getElementById('rememberMe').checked;
-
-            if (!email || !password) {
-                showError('Please fill in all fields');
-                return;
-            }
-
-            if (!email.includes('@')) {
-                showError('Please enter a valid email address');
-                return;
-            }
-
-            // Submit to backend after client-side validation
-            const loginBtn = document.querySelector('.btn-login');
-            loginBtn.disabled = true;
-            console.log('Login attempt:', { email, rememberMe, acct: connectedAccount || 'No MetaMask' });
-            
-            // Send login request to backend with connected account
-            fetch('/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ email, password, rememberMe, acct: connectedAccount })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.isLoggedIn) {
-                    showSuccess('Login successful! Redirecting to dashboard...');
-                    setTimeout(() => {
-                        window.location.href = '/user-home';
-                    }, 1500);
-                } else {
-                    showError(data.message || 'Login failed');
-                    loginBtn.disabled = false;
-                }
-            })
-            .catch(error => {
-                console.error('Login error:', error);
-                showError('Login failed: ' + error.message);
-                loginBtn.disabled = false;
-            });
-        }
-
-        // Connect MetaMask wallet
-        async function connectMetaMask() {
-            if (!window.ethereum) {
-                showError('MetaMask is not installed. Please install it to continue.');
-                return;
-            }
-
-            const btn = document.getElementById('metamaskBtn');
-            btn.disabled = true;
-
-            try {
-                // Request account access
-                const accounts = await window.ethereum.request({
-                    method: 'eth_requestAccounts'
-                });
-
-                const account = accounts[0];
-                console.log('Connected account:', account);
-                
-                // Store the connected account
-                connectedAccount = account;
-
-                // Load Web3 and contract
-                const web3 = new Web3(window.ethereum);
-                const contractData = await fetch('/build/OrderContract.json').then(r => r.json());
-                const networkId = await web3.eth.net.getId();
-                const deployedNetwork = contractData.networks[networkId];
-                
-                if (!deployedNetwork) {
-                    showError('Please connect to the correct network (Ganache on port 7545)');
-                    btn.disabled = false;
-                    return;
-                }
-
-                // Get order count
-                const contract = new web3.eth.Contract(contractData.abi, deployedNetwork.address);
-                const orderCount = await contract.methods.getOrderCount().call();
-                const orderCountValue = orderCount.toString();
-
-                // Send connection data to backend
-                const response = await fetch('/web3ConnectData', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        contractAddress: deployedNetwork.address,
-                        acct: account,
-                        orderCnt: orderCountValue
-                    })
-                });
-
-                if (response.ok) {
-                    // Update button to show connected status
-                    btn.textContent = '✓ MetaMask Connected';
-                    btn.disabled = false;
-                    btn.style.backgroundColor = '#4CAF50';
-                    
-                    showSuccess('MetaMask wallet connected! You can now sign in.');
-                } else {
-                    showError('Failed to connect wallet');
-                    btn.disabled = false;
-                }
-            } catch (error) {
-                console.error('MetaMask connection error:', error);
-                showError('Failed to connect MetaMask: ' + error.message);
-                btn.disabled = false;
-            }
-        }
-
-        // Show error message
-        function showError(message) {
-            const errorDiv = document.getElementById('errorMessage');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-
-            setTimeout(() => {
-                errorDiv.style.display = 'none';
-            }, 5000);
-        }
-
-        // Show success message
-        function showSuccess(message) {
-            const successDiv = document.getElementById('successMessage');
-            successDiv.textContent = message;
-            successDiv.style.display = 'block';
-        }
-
-        
-    </script>
 </body>
 </html>
