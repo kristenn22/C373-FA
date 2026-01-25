@@ -165,6 +165,13 @@
             background: #333;
         }
 
+        .reserved {
+            background: #888 !important;
+            border-color: #888 !important;
+            cursor: not-allowed;
+            opacity: 0.75;
+        }
+
         .product-detail-container {
             background: white;
             padding: 40px;
@@ -296,7 +303,7 @@
 
                     <div class="product-actions">
                         <a href="/buy" class="btn btn-primary">View & Buy</a>
-                        <button class="btn btn-secondary" onclick="addToCart('One Piece The Monsters', 150)">Add to Cart</button>
+                        <button class="btn btn-secondary" data-product="One Piece The Monsters" onclick="addToCart('One Piece The Monsters', 150)">Add to Cart</button>
                     </div>
 
                     <div class="product-description">
@@ -316,7 +323,7 @@
                     <div class="product-name">One Piece The Monsters</div>
                     <div class="product-price">$150</div>
                     <div class="product-meta">Listed 1 week ago</div>
-                    <button class="buy-btn" onclick="event.stopPropagation(); addToCart('One Piece The Monsters', 150)" id="card-btn-1">Add to Cart</button>
+                    <button class="buy-btn" onclick="event.stopPropagation(); addToCart('One Piece The Monsters', 150)" id="card-btn-1" data-product="One Piece The Monsters">Add to Cart</button>
                 </div>
             </div>
 
@@ -327,7 +334,7 @@
                     <div class="product-name">Gaming Headset Pro</div>
                     <div class="product-price">$85</div>
                     <div class="product-meta">Listed 3 days ago</div>
-                    <button class="buy-btn" onclick="event.stopPropagation(); addToCart('Gaming Headset Pro', 85)" id="card-btn-2">Add to Cart</button>
+                    <button class="buy-btn" onclick="event.stopPropagation(); addToCart('Gaming Headset Pro', 85)" id="card-btn-2" data-product="Gaming Headset Pro">Add to Cart</button>
                 </div>
             </div>
 
@@ -338,7 +345,7 @@
                     <div class="product-name">Blue Sneakers</div>
                     <div class="product-price">$120</div>
                     <div class="product-meta">Listed 5 days ago</div>
-                    <button class="buy-btn" onclick="event.stopPropagation(); addToCart('Blue Sneakers', 120)" id="card-btn-3">Add to Cart</button>
+                    <button class="buy-btn" onclick="event.stopPropagation(); addToCart('Blue Sneakers', 120)" id="card-btn-3" data-product="Blue Sneakers">Add to Cart</button>
                 </div>
             </div>
         </div>
