@@ -191,7 +191,8 @@ function getCommonData(req) {
     return {
         acct: account,
         loading: loading,
-        isLoggedIn: isLoggedIn
+        isLoggedIn: isLoggedIn,
+        error: null
     };
 }
 
@@ -563,9 +564,8 @@ app.post('/logout', express.json(), async(req, res) => {
 app.get('/products', async(req, res) => {
     try {
         const data = getCommonData(req);
-        res.render('products', {
+        res.render('productDetails', {
             ...data,
-            petId: 0
         });
     } catch (error) {
         console.error('Error in products route:', error);
@@ -677,6 +677,8 @@ app.get('/sellerorders', async(req, res) => {
     try {
         res.render('sellerorders', {
             ...data,
+            contractABI: JSON.stringify(OrderContract.abi),
+            contractData: JSON.stringify(OrderContract),
             sellerContractABI: JSON.stringify(SellerOrderContract.abi),
             sellerContractData: JSON.stringify(SellerOrderContract)
         });

@@ -324,7 +324,10 @@
     <script>
         let web3;
         let sellerContract;
+        let orderContract;
         let userAccount;
+        const contractABI = <%- contractABI %>;
+        const contractData = <%- contractData %>;
         const sellerContractABI = <%- sellerContractABI %>;
         const sellerContractData = <%- sellerContractData %>;
         let sellerOrders = [];
@@ -349,18 +352,27 @@
                 // Prefer the second account for seller actions; fall back to first if missing
                 userAccount = accounts.length > 1 ? accounts[1] : accounts[0];
                 const networkId = await web3.eth.net.getId();
-                const deployedNetwork = sellerContractData.networks[networkId];
+                const orderNet = contractData.networks[networkId];
+                const sellerNet = sellerContractData.networks[networkId];
                 
-                if (deployedNetwork) {
-                    sellerContract = new web3.eth.Contract(sellerContractABI, deployedNetwork.address);
+                if (orderNet) {
+                    orderContract = new web3.eth.Contract(contractABI, orderNet.address);
+                }
+
+                if (sellerNet) {
+                    sellerContract = new web3.eth.Contract(sellerContractABI, sellerNet.address);
                     document.getElementById('sellerAddress').textContent = userAccount;
                     await refreshSellerBalance();
-                    await loadSellerOrders();
-                } else {
-                    console.error('Seller contract not deployed on network', networkId);
+                }
+
+                if (!orderNet && !sellerNet) {
+                    console.error('No contracts deployed on network', networkId);
                     loadingMsg.style.display = 'none';
                     showNoOrders();
+                    return;
                 }
+
+                await loadSellerOrders();
             } catch (error) {
                 console.error('Error initializing Web3:', error);
                 loadingMsg.style.display = 'none';
@@ -404,39 +416,61 @@
                 const loadingMsg = document.getElementById('loadingMsg');
                 loadingMsg.style.display = 'block';
                 
-                // Get total order count
-                const orderCount = await sellerContract.methods.getSellerOrderCount().call();
-                const count = Number(orderCount);
-                
-                console.log('Total orders in blockchain:', count);
                 sellerOrders = [];
 
-                // Fetch all orders where user is the seller
-                for (let i = 1; i <= count; i++) {
-                    try {
-                        const order = await sellerContract.methods.getSellerOrder(i).call();
-                        
-                        // Check if user is the seller
-                        if (userAccount.toLowerCase() === order.seller.toLowerCase()) {
+                // Include all main OrderContract orders (so View All Orders shows everything)
+                if (orderContract) {
+                    const orderCount = await orderContract.methods.getOrderCount().call();
+                    for (let i = 1; i <= Number(orderCount); i++) {
+                        try {
+                            const order = await orderContract.methods.getOrder(i).call();
                             sellerOrders.push({
+                                source: 'order',
                                 orderId: i,
                                 productName: order.productName || 'Product',
                                 buyerName: order.buyerName || 'N/A',
                                 buyer: order.buyer,
                                 totalAmount: String(order.totalAmount) || '0',
                                 isPaid: order.isPaid || false,
+                                isReleased: order.isReleased || false,
                                 isShipped: order.isShipped || false,
                                 status: statusMap[order.status] || 'Unknown',
                                 statusCode: Number(order.status),
                                 timestamp: Number(order.timestamp)
                             });
+                        } catch (error) {
+                            console.error('Error loading order', i, ':', error);
                         }
-                    } catch (error) {
-                        console.error('Error loading order', i, ':', error);
                     }
                 }
 
-                console.log('User seller orders found:', sellerOrders);
+                // Load seller-specific orders (SellerOrderContract) if deployed
+                if (sellerContract) {
+                    const sellerOrderCount = await sellerContract.methods.getSellerOrderCount().call();
+                    for (let i = 1; i <= Number(sellerOrderCount); i++) {
+                        try {
+                            const order = await sellerContract.methods.getSellerOrder(i).call();
+                            sellerOrders.push({
+                                source: 'seller',
+                                orderId: i,
+                                productName: order.productName || 'Product',
+                                buyerName: order.buyerName || 'N/A',
+                                buyer: order.buyer,
+                                totalAmount: String(order.totalAmount) || '0',
+                                isPaid: order.isPaid || false,
+                                isReleased: order.isReleased || false,
+                                isShipped: order.isShipped || false,
+                                status: statusMap[order.status] || 'Unknown',
+                                statusCode: Number(order.status),
+                                timestamp: Number(order.timestamp)
+                            });
+                        } catch (error) {
+                            console.error('Error loading seller order', i, ':', error);
+                        }
+                    }
+                }
+
+                console.log('Seller orders found:', sellerOrders);
                 loadingMsg.style.display = 'none';
                 displayOrders();
             } catch (error) {

@@ -355,20 +355,19 @@
                         const order = await orderContract.methods.getOrder(i).call();
                         const isBuyer = userAccount.toLowerCase() === order.buyer.toLowerCase();
                         const isSeller = userAccount.toLowerCase() === order.seller.toLowerCase();
-                        if (isBuyer || isSeller) {
-                            allOrders.push({
-                                source: 'order',
-                                orderId: i,
-                                productName: order.productName || 'Product',
-                                totalAmount: String(order.totalAmount) || '0',
-                                status: statusMap[order.status] || 'Unknown',
-                                statusClass: 'status-' + (statusMap[order.status] || 'pending').toLowerCase().replace(' ', '-'),
-                                statusCode: Number(order.status),
-                                timestamp: Number(order.timestamp),
-                                isBuyer,
-                                isSeller
-                            });
-                        }
+                        // Show every order; still track whether current account is buyer or seller for filtering
+                        allOrders.push({
+                            source: 'order',
+                            orderId: i,
+                            productName: order.productName || 'Product',
+                            totalAmount: String(order.totalAmount) || '0',
+                            status: statusMap[order.status] || 'Unknown',
+                            statusClass: 'status-' + (statusMap[order.status] || 'pending').toLowerCase().replace(' ', '-'),
+                            statusCode: Number(order.status),
+                            timestamp: Number(order.timestamp),
+                            isBuyer,
+                            isSeller
+                        });
                     } catch (error) {
                         console.error('Error loading order', i, ':', error);
                     }
@@ -382,27 +381,26 @@
                             const order = await sellerContract.methods.getSellerOrder(i).call();
                             const isBuyer = userAccount.toLowerCase() === order.buyer.toLowerCase();
                             const isSeller = userAccount.toLowerCase() === order.seller.toLowerCase();
-                            if (isBuyer || isSeller) {
-                                const statusText = (order.status == 0 ? 'Pending'
-                                    : order.status == 1 ? 'Accepted'
-                                    : order.status == 2 ? 'Shipped'
-                                    : order.status == 3 ? 'Delivered'
-                                    : order.status == 4 ? 'Paid'
-                                    : 'Cancelled');
+                            const statusText = (order.status == 0 ? 'Pending'
+                                : order.status == 1 ? 'Accepted'
+                                : order.status == 2 ? 'Shipped'
+                                : order.status == 3 ? 'Delivered'
+                                : order.status == 4 ? 'Paid'
+                                : 'Cancelled');
 
-                                allOrders.push({
-                                    source: 'seller',
-                                    orderId: i,
-                                    productName: order.productName || 'Product',
-                                    totalAmount: String(order.totalAmount) || '0',
-                                    status: statusText,
-                                    statusClass: 'status-' + statusText.toLowerCase(),
-                                    statusCode: Number(order.status),
-                                    timestamp: Number(order.timestamp),
-                                    isBuyer,
-                                    isSeller
-                                });
-                            }
+                            // Show every seller order; keep role flags for filtering
+                            allOrders.push({
+                                source: 'seller',
+                                orderId: i,
+                                productName: order.productName || 'Product',
+                                totalAmount: String(order.totalAmount) || '0',
+                                status: statusText,
+                                statusClass: 'status-' + statusText.toLowerCase(),
+                                statusCode: Number(order.status),
+                                timestamp: Number(order.timestamp),
+                                isBuyer,
+                                isSeller
+                            });
                         } catch (error) {
                             console.error('Error loading seller order', i, ':', error);
                         }
