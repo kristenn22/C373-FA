@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Store Orders - LegitLah</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #000;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+
+        .nav-link:hover {
+            color: #000;
+        }
+
+        .nav-link.active {
+            color: #000;
+            font-weight: 600;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+        }
+
+        .account-info {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            color: #333;
+            font-size: 32px;
+        }
+
+        .filter-section {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: #000;
+            color: white;
+            border-color: #000;
+        }
+
+        .filter-btn:hover {
+            border-color: #000;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 16px;
+        }
+
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        .orders-table thead {
+            background: #f9f9f9;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .orders-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .orders-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .orders-table tbody tr:hover {
+            background: #f9f9f9;
+            cursor: pointer;
+        }
+
+        .order-id {
+            font-weight: 600;
+            color: #000;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-processing {
+            background: #bfdbfe;
+            color: #1e40af;
+        }
+
+        .status-shipped {
+            background: #d1d5db;
+            color: #1f2937;
+        }
+
+        .status-delivered {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-confirmed {
+            background: #c7d2fe;
+            color: #3730a3;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .button-primary {
+            background: #000;
+            color: white;
+        }
+
+        .button-primary:hover {
+            background: #333;
+        }
+
+        .button-secondary {
+            background: #e5e7eb;
+            color: #333;
+        }
+
+        .button-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .no-orders {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .no-orders p {
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .review-section {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+
+        .review-rating {
+            color: #fbbf24;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .review-text {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <!-- Seller Portal Navbar -->
+    <div class="header">
+        <a href="/admin" class="logo">LegitLah</a>
+        <nav class="nav-links">
+            <a href="/seller" class="nav-link">Manage Orders</a>
+            <a href="/sellerorders" class="nav-link active">View All Orders</a>
+            <a href="#" onclick="logout()" class="nav-link">Logout</a>
+        </nav>
+    </div>
+    
+    <div class="container">
+        <h1>My Store Orders (Seller)</h1>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:16px;">
+            <div style="padding:12px 14px; border:1px solid #e5e7eb; border-radius:10px; background:#f9fafb;">
+                <div style="font-size:12px; color:#6b7280;">Seller Address</div>
+                <div id="sellerAddress" style="font-family: monospace; font-weight:600; color:#111827;">-</div>
+            </div>
+            <div style="padding:12px 14px; border:1px solid #e5e7eb; border-radius:10px; background:#f9fafb;">
+                <div style="font-size:12px; color:#6b7280;">Available Balance (ETH)</div>
+                <div id="sellerBalance" style="font-family: monospace; font-weight:700; color:#0f172a;">0</div>
+            </div>
+            <button id="withdrawBtn" class="filter-btn" style="border-color:#16a34a; color:#065f46; font-weight:700;" onclick="withdrawBalance()">Withdraw to My Address</button>
+        </div>
+
+        <div class="filter-section">
+            <button class="filter-btn active" onclick="filterOrders('all')">All Orders</button>
+            <button class="filter-btn" onclick="filterOrders('pending')">Pending</button>
+            <button class="filter-btn" onclick="filterOrders('accepted')">Accepted</button>
+            <button class="filter-btn" onclick="filterOrders('shipped')">Shipped</button>
+            <button class="filter-btn" onclick="filterOrders('delivered')">Delivered</button>
+            <button class="filter-btn" onclick="filterOrders('paid')">Paid</button>
+            <button class="filter-btn" onclick="filterOrders('cancelled')">Cancelled</button>
+        </div>
+
+        <div id="loadingMsg" class="loading" style="display:none;">
+            <p>Loading store orders...</p>
+        </div>
+
+        <div id="noOrders" class="no-orders" style="display:none;">
+            <p>No orders found</p>
+        </div>
+
+        <table class="orders-table" id="ordersTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Product</th>
+                    <th>Buyer Name</th>
+                    <th>Amount</th>
+                    <th>Payment</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="ordersBody">
+            </tbody>
+        </table>
+
+        <div class="action-buttons">
+            <button class="button button-secondary" onclick="goBack()">
+                Back to Admin
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let sellerContract;
+        let orderContract;
+        let userAccount;
+        const contractABI = <%- contractABI %>;
+        const contractData = <%- contractData %>;
+        const sellerContractABI = <%- sellerContractABI %>;
+        const sellerContractData = <%- sellerContractData %>;
+        let sellerOrders = [];
+        let currentFilter = 'all';
+
+        const statusMap = {
+            '0': 'Pending',
+            '1': 'Accepted',
+            '2': 'Shipped',
+            '3': 'Delivered',
+            '4': 'Paid',
+            '5': 'Cancelled'
+        };
+
+        async function initWeb3() {
+            try {
+                const loadingMsg = document.getElementById('loadingMsg');
+                loadingMsg.style.display = 'block';
+
+                web3 = new Web3('http://127.0.0.1:7545');
+                const accounts = await web3.eth.getAccounts();
+                // Prefer the second account for seller actions; fall back to first if missing
+                userAccount = accounts.length > 1 ? accounts[1] : accounts[0];
+                const networkId = await web3.eth.net.getId();
+                const orderNet = contractData.networks[networkId];
+                const sellerNet = sellerContractData.networks[networkId];
+                
+                if (orderNet) {
+                    orderContract = new web3.eth.Contract(contractABI, orderNet.address);
+                }
+
+                if (sellerNet) {
+                    sellerContract = new web3.eth.Contract(sellerContractABI, sellerNet.address);
+                    document.getElementById('sellerAddress').textContent = userAccount;
+                    await refreshSellerBalance();
+                }
+
+                if (!orderNet && !sellerNet) {
+                    console.error('No contracts deployed on network', networkId);
+                    loadingMsg.style.display = 'none';
+                    showNoOrders();
+                    return;
+                }
+
+                await loadSellerOrders();
+            } catch (error) {
+                console.error('Error initializing Web3:', error);
+                loadingMsg.style.display = 'none';
+                showNoOrders();
+            }
+        }
+
+        async function refreshSellerBalance() {
+            if (!sellerContract || !userAccount) return;
+            try {
+                const balWei = await sellerContract.methods.getSellerBalance(userAccount).call();
+                const balEth = web3.utils.fromWei(balWei, 'ether');
+                document.getElementById('sellerBalance').textContent = balEth;
+            } catch (err) {
+                console.error('Failed to fetch balance:', err.message);
+            }
+        }
+
+        async function withdrawBalance() {
+            try {
+                if (!sellerContract || !userAccount) {
+                    alert('Wallet not connected or contract unavailable');
+                    return;
+                }
+                const balText = document.getElementById('sellerBalance').textContent || '0';
+                if (Number(balText) <= 0) {
+                    alert('No balance to withdraw');
+                    return;
+                }
+                await sellerContract.methods.withdrawBalance().send({ from: userAccount, gas: 200000 });
+                alert('Withdrawn to your address.');
+                await refreshSellerBalance();
+            } catch (err) {
+                console.error('Withdraw failed:', err);
+                alert('Withdraw failed: ' + (err.message || 'Unknown error'));
+            }
+        }
+
+        async function loadSellerOrders() {
+            try {
+                const loadingMsg = document.getElementById('loadingMsg');
+                loadingMsg.style.display = 'block';
+                
+                sellerOrders = [];
+
+                // Include all main OrderContract orders (so View All Orders shows everything)
+                if (orderContract) {
+                    const orderCount = await orderContract.methods.getOrderCount().call();
+                    for (let i = 1; i <= Number(orderCount); i++) {
+                        try {
+                            const order = await orderContract.methods.getOrder(i).call();
+                            sellerOrders.push({
+                                source: 'order',
+                                orderId: i,
+                                productName: order.productName || 'Product',
+                                buyerName: order.buyerName || 'N/A',
+                                buyer: order.buyer,
+                                totalAmount: String(order.totalAmount) || '0',
+                                isPaid: order.isPaid || false,
+                                isReleased: order.isReleased || false,
+                                isShipped: order.isShipped || false,
+                                status: statusMap[order.status] || 'Unknown',
+                                statusCode: Number(order.status),
+                                timestamp: Number(order.timestamp)
+                            });
+                        } catch (error) {
+                            console.error('Error loading order', i, ':', error);
+                        }
+                    }
+                }
+
+                // Load seller-specific orders (SellerOrderContract) if deployed
+                if (sellerContract) {
+                    const sellerOrderCount = await sellerContract.methods.getSellerOrderCount().call();
+                    for (let i = 1; i <= Number(sellerOrderCount); i++) {
+                        try {
+                            const order = await sellerContract.methods.getSellerOrder(i).call();
+                            sellerOrders.push({
+                                source: 'seller',
+                                orderId: i,
+                                productName: order.productName || 'Product',
+                                buyerName: order.buyerName || 'N/A',
+                                buyer: order.buyer,
+                                totalAmount: String(order.totalAmount) || '0',
+                                isPaid: order.isPaid || false,
+                                isReleased: order.isReleased || false,
+                                isShipped: order.isShipped || false,
+                                status: statusMap[order.status] || 'Unknown',
+                                statusCode: Number(order.status),
+                                timestamp: Number(order.timestamp)
+                            });
+                        } catch (error) {
+                            console.error('Error loading seller order', i, ':', error);
+                        }
+                    }
+                }
+
+                console.log('Seller orders found:', sellerOrders);
+                loadingMsg.style.display = 'none';
+                displayOrders();
+            } catch (error) {
+                console.error('Error loading seller orders:', error);
+                document.getElementById('loadingMsg').style.display = 'none';
+                showNoOrders();
+            }
+        }
+
+        function filterOrders(status) {
+            currentFilter = status;
+            
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            displayOrders();
+        }
+
+        function displayOrders() {
+            let filteredOrders = sellerOrders;
+            
+            if (currentFilter !== 'all') {
+                filteredOrders = sellerOrders.filter(o => 
+                    o.status.toLowerCase().replace(' ', '-') === currentFilter
+                );
+            }
+
+            const ordersBody = document.getElementById('ordersBody');
+            const ordersTable = document.getElementById('ordersTable');
+            const noOrders = document.getElementById('noOrders');
+
+            if (filteredOrders.length === 0) {
+                ordersTable.style.display = 'none';
+                noOrders.style.display = 'block';
+                return;
+            }
+
+            // Sort by order ID descending (newest first)
+            filteredOrders.sort((a, b) => b.orderId - a.orderId);
+
+            ordersBody.innerHTML = '';
+            
+            filteredOrders.forEach(order => {
+                const orderDate = new Date(order.timestamp * 1000);
+                const statusClass = 'status-' + order.status.toLowerCase().replace(' ', '-');
+                let paymentBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">Unpaid</span>';
+                if (order.isPaid && !order.isReleased) {
+                    paymentBadge = '<span style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">Payment Held (Digital Safe)</span>';
+                } else if (order.isPaid && order.isReleased) {
+                    paymentBadge = '<span style="background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">Released to Seller</span>';
+                }
+
+                const canCancel = !order.isShipped && order.statusCode !== 5;
+                const cancelAction = canCancel
+                    ? `<button onclick="event.stopPropagation(); cancelOrder(${order.orderId});" style="background:#dc2626;color:white;border:none;border-radius:6px;padding:8px 12px;font-weight:600;cursor:pointer;">Cancel</button>`
+                    : `<span style="color:#9ca3af; font-weight:600;">Not cancellable</span>`;
+
+                const row = document.createElement('tr');
+                row.onclick = () => viewOrderDetails(order.orderId);
+                row.innerHTML = `
+                    <td class="order-id">#${order.orderId}</td>
+                    <td>${order.productName}</td>
+                    <td>${order.buyerName}</td>
+                    <td>$${order.totalAmount}</td>
+                    <td>${paymentBadge}</td>
+                    <td><span class="status-badge ${statusClass}">${order.status}</span></td>
+                    <td>${orderDate.toLocaleDateString()}</td>
+                    <td style="display:flex;gap:8px;align-items:center;">
+                        <a href="#" onclick="event.stopPropagation(); viewOrderDetails(${order.orderId});" style="color: #2563eb; text-decoration: none; font-weight: 600;">View</a>
+                        ${cancelAction}
+                    </td>
+                `;
+                ordersBody.appendChild(row);
+            });
+
+            ordersTable.style.display = 'table';
+            noOrders.style.display = 'none';
+        }
+
+        function viewOrderDetails(orderId) {
+            window.location.href = '/orderdetails?orderId=' + orderId;
+        }
+
+        async function cancelOrder(orderId) {
+            try {
+                if (!sellerContract || !userAccount) {
+                    alert('Wallet not connected or contract unavailable');
+                    return;
+                }
+                const confirmed = confirm('Cancel this order? This cannot be undone.');
+                if (!confirmed) return;
+
+                await sellerContract.methods.cancelOrder(orderId).send({ from: userAccount, gas: 200000 });
+                alert('Order cancelled.');
+                await loadSellerOrders();
+            } catch (err) {
+                console.error('Cancel failed:', err);
+                alert('Cancel failed: ' + (err.message || 'Unknown error'));
+            }
+        }
+
+        function showNoOrders() {
+            document.getElementById('ordersTable').style.display = 'none';
+            document.getElementById('noOrders').style.display = 'block';
+        }
+
+        function goBack() {
+            window.location.href = '/seller';
+        }
+
+        function logout() {
+            fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/';
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        window.addEventListener('load', initWeb3);
+    </script>
+</body>
+</html>

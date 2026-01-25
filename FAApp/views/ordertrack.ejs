@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LegitLah - Order Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: white;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .account-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .order-summary {
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .order-summary h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .order-item {
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .order-total {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-top: 10px;
+        }
+
+        .details-button {
+            width: 100%;
+            padding: 16px;
+            background: #000;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 20px;
+        }
+
+        .details-button:hover {
+            background: #333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .nav-link {
+            color: #2563eb;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">LegitLah</div>
+        <div>
+            <% if (acct) { %>
+                <span class="account-info">Connected: <%= acct.substring(0, 6) %>...<%=acct.substring(38) %></span>
+            <% } %>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Order tracker</h1>
+
+        <% if (loading) { %>
+            <div class="loading">
+                <p>Loading order information...</p>
+            </div>
+        <% } else { %>
+            <div class="order-summary">
+                <h2>Order summary:</h2>
+                <div class="order-item" id="orderProduct">Loading...</div>
+                <div class="order-total" id="orderPrice">$0</div>
+                <div class="order-status" id="orderStatus"></div>
+                <div class="order-status" id="processingAt" style="color:#555; font-size:14px;"></div>
+                <div class="order-status" id="shippedAt" style="color:#555; font-size:14px;"></div>
+                <div class="order-status" id="deliveredAt" style="color:#555; font-size:14px;"></div>
+            </div>
+
+            <button class="details-button" onclick="viewDetails()">Details</button>
+
+            <div class="nav-links">
+                <a href="/buyerorders" class="nav-link">← Back to Order History</a>
+            </div>
+        <% } %>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let contract;
+        let userAccount;
+        
+        // Get orderId from URL query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlOrderId = urlParams.get('orderId');
+        const serverOrderId = <%= orderId || 0 %>;
+        let orderId = urlOrderId ? Number(urlOrderId) : (serverOrderId ? Number(serverOrderId) : 0);
+        
+        const contractABI = <%- contractABI %>;
+        const contractData = <%- contractData %>;
+
+        console.log('=== ORDER TRACKER PAGE ===');
+        console.log('URL orderId:', urlOrderId);
+        console.log('Server orderId:', serverOrderId);
+        console.log('Final orderId:', orderId);
+
+        const statusMap = {
+            '0': 'Pending',
+            '1': 'Processing',
+            '2': 'Shipped',
+            '3': 'Delivered',
+            '4': 'Confirmed'
+        };
+
+        async function initWeb3() {
+            try {
+                web3 = new Web3('http://127.0.0.1:7545');
+                const accounts = await web3.eth.getAccounts();
+                userAccount = accounts[0];
+                console.log('Using account:', userAccount);
+                
+                const networkId = await web3.eth.net.getId();
+                console.log('Detected network ID:', networkId);
+                const deployedNetwork = contractData.networks[networkId];
+                
+                if (deployedNetwork) {
+                    contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
+                    console.log('Contract loaded at:', deployedNetwork.address);
+
+                    // If no orderId was provided, fall back to latest order
+                    if (!orderId || orderId <= 0) {
+                        const count = await contract.methods.getOrderCount().call();
+                        const countNum = Number(count);
+                        console.log('Total orders on chain:', countNum);
+                        
+                        if (countNum > 0) {
+                            orderId = countNum;
+                            console.log('Using latest order ID:', orderId);
+                        } else {
+                            document.getElementById('orderProduct').textContent = 'No orders yet. Complete a purchase first!';
+                            document.getElementById('orderPrice').textContent = '$0';
+                            document.getElementById('orderStatus').textContent = '';
+                            document.querySelector('.details-button').disabled = true;
+                            document.querySelector('.details-button').style.background = '#ccc';
+                            document.querySelector('.details-button').style.cursor = 'not-allowed';
+                            return;
+                        }
+                    }
+
+                    await loadOrderData();
+                } else {
+                    console.error('Contract not deployed on network', networkId);
+                    console.error('Available networks:', Object.keys(contractData.networks));
+                    document.getElementById('orderProduct').textContent = 'Contract not found on network';
+                    document.getElementById('orderPrice').textContent = '$0';
+                }
+            } catch (error) {
+                console.error('Error initializing Web3:', error);
+                document.getElementById('orderProduct').textContent = 'Error connecting to blockchain';
+                document.getElementById('orderPrice').textContent = '$0';
+            }
+        }
+
+        async function loadOrderData() {
+            try {
+                console.log('Loading order data for orderId:', orderId);
+                const order = await contract.methods.getOrder(orderId).call();
+                const tracking = await contract.methods.getTrackingHistory(orderId).call();
+                console.log('=== FULL ORDER RESPONSE ===');
+                console.log('Order keys:', Object.keys(order));
+                console.log('orderId:', order.orderId);
+                console.log('buyer:', order.buyer);
+                console.log('seller:', order.seller);
+                console.log('buyerName:', order.buyerName);
+                console.log('totalAmount:', order.totalAmount);
+                console.log('status:', order.status);
+                console.log('product type:', typeof order.product);
+                if (order.product) {
+                    console.log('product keys:', Object.keys(order.product));
+                    console.log('product.name:', order.product.name);
+                    console.log('product.price:', order.product.price);
+                }
+                console.log('===========================');
+                
+                // Try different property paths
+                let productName = 'Product';
+                let totalAmount = '0';
+                let status = '0';
+                
+                if (order.product && order.product.name) {
+                    productName = order.product.name;
+                    console.log('✓ Got product name from order.product.name:', productName);
+                } else if (order.productName) {
+                    productName = order.productName;
+                    console.log('✓ Got product name from order.productName:', productName);
+                } else {
+                    console.warn('Could not find product name in order');
+                }
+                
+                if (order.totalAmount) {
+                    totalAmount = String(order.totalAmount); // Convert BigInt to string
+                    console.log('✓ Got totalAmount:', totalAmount);
+                }
+                
+                if (order.status !== undefined) {
+                    status = String(order.status);
+                    console.log('✓ Got status:', status);
+                }
+                
+                console.log('Displaying:', { productName, totalAmount, status });
+                document.getElementById('orderProduct').textContent = productName;
+                document.getElementById('orderPrice').textContent = '$' + totalAmount;
+                document.getElementById('orderStatus').textContent = 'Status: ' + statusMap[status];
+
+                // Delivered timestamp display
+                const deliveredEl = document.getElementById('deliveredAt');
+                if (order.deliveredAt && Number(order.deliveredAt) > 0) {
+                    const deliveredDate = new Date(Number(order.deliveredAt) * 1000);
+                    deliveredEl.textContent = deliveredDate.toLocaleString();
+                } else {
+                    deliveredEl.textContent = 'Waiting for delivery';
+                }
+
+                // Processing and Shipped timestamps from tracking history
+                let processingAtTs = 0;
+                let shippedAtTs = 0;
+                tracking.forEach(t => {
+                    if (!processingAtTs && t.status === 'Processing') {
+                        processingAtTs = Number(t.timestamp);
+                    }
+                    if (!shippedAtTs && t.status === 'Shipped') {
+                        shippedAtTs = Number(t.timestamp);
+                    }
+                });
+
+                const processingEl = document.getElementById('processingAt');
+                if (processingAtTs > 0) {
+                    processingEl.textContent = 'Processing at: ' + new Date(processingAtTs * 1000).toLocaleString();
+                } else {
+                    processingEl.textContent = 'Processing at: waiting';
+                }
+
+                const shippedEl = document.getElementById('shippedAt');
+                if (shippedAtTs > 0) {
+                    shippedEl.textContent = 'Shipped at: ' + new Date(shippedAtTs * 1000).toLocaleString();
+                } else {
+                    shippedEl.textContent = 'Shipped at: waiting';
+                }
+            } catch (error) {
+                console.error('Error loading order:', error);
+                document.getElementById('orderProduct').textContent = 'Error loading order #' + orderId;
+                document.getElementById('orderPrice').textContent = '$0';
+            }
+        }
+
+        function viewDetails() {
+            if (!orderId || orderId <= 0) {
+                alert('No order to view. Please complete a purchase first.');
+                return;
+            }
+            console.log('Navigating to order details for orderId:', orderId);
+            window.location.href = '/orderdetails?orderId=' + orderId;
+        }
+
+        window.addEventListener('load', initWeb3);
+        console.log('=========================');
+    </script>
+</body>
+</html>
