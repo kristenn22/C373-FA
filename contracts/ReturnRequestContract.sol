@@ -19,7 +19,7 @@ contract ReturnRequestContract {
 
     mapping(uint => ReturnRequest) private requests;
 
-    // ✅ NEW: allow listing requests
+    // allow listing requests
     uint public requestCount;
     uint[] private requestOrderIds;
 
@@ -49,7 +49,6 @@ contract ReturnRequestContract {
             sellerNote: ""
         });
 
-        // ✅ NEW
         requestCount++;
         requestOrderIds.push(_orderId);
 
@@ -97,7 +96,7 @@ contract ReturnRequestContract {
         return requests[_orderId].status;
     }
 
-    // ✅ NEW getters for pages
+    // getters for pages
     function getAllRequestOrderIds() public view returns (uint[] memory) {
         return requestOrderIds;
     }
