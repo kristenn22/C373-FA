@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LegitLah - Order Details</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: white;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .account-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        /* Timeline Styles */
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+
+        .timeline-container {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .timeline-line {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #e5e7eb;
+            z-index: 1;
+        }
+
+        .timeline-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: #2563eb;
+            transition: width 0.5s ease;
+            z-index: 2;
+        }
+
+        .timeline-step {
+            position: relative;
+            flex: 1;
+            text-align: center;
+            z-index: 3;
+        }
+
+        .timeline-dot {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            border: 4px solid white;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #999;
+            transition: all 0.3s;
+        }
+
+        .timeline-step.completed .timeline-dot {
+            background: #2563eb;
+            color: white;
+        }
+
+        .timeline-step.active .timeline-dot {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+        }
+
+        .timeline-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .timeline-step.completed .timeline-label,
+        .timeline-step.active .timeline-label {
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        /* Order Details Section */
+        .details-section {
+            background: #f9f9f9;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .details-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .details-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .order-id {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .details-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .details-item:last-child {
+            border-bottom: none;
+        }
+
+        .details-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .details-value {
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        #paymentStatus {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        #paymentStatus.paid {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        #paymentStatus.unpaid {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        #paymentStatus.held {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        #paymentStatus.released {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .payment-note {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .tracking-history {
+            margin-top: 30px;
+        }
+
+        .tracking-history h3 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .tracking-item {
+            padding: 15px;
+            background: white;
+            border-left: 3px solid #2563eb;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .tracking-status {
+            font-weight: 600;
+            color: #2563eb;
+            margin-bottom: 5px;
+        }
+
+        .tracking-description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .tracking-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .button-primary {
+            background: #000;
+            color: white;
+        }
+
+        .button-primary:hover {
+            background: #333;
+        }
+
+        .button-secondary {
+            background: #e5e7eb;
+            color: #333;
+        }
+
+        .button-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/navbar') %>
+    
+    <div class="container">
+        <h1>Order Details</h1>
+
+        <% if (loading) { %>
+            <div class="loading">
+                <p>Loading order details...</p>
+            </div>
+        <% } else { %>
+            <!-- Timeline -->
+            <div class="timeline">
+                <div class="timeline-container">
+                    <div class="timeline-line">
+                        <div class="timeline-progress" id="timelineProgress"></div>
+                    </div>
+                    
+                    <div class="timeline-step completed" data-step="1">
+                        <div class="timeline-dot">✓</div>
+                        <div class="timeline-label">Order<br>Placed</div>
+                    </div>
+                    
+                    <div class="timeline-step" data-step="2" id="step2">
+                        <div class="timeline-dot">2</div>
+                        <div class="timeline-label">Order<br>Processing</div>
+                    </div>
+                    
+                    <div class="timeline-step" data-step="3" id="step3">
+                        <div class="timeline-dot">3</div>
+                        <div class="timeline-label">Shipment<br>Process</div>
+                    </div>
+                    
+                    <div class="timeline-step" data-step="4" id="step4">
+                        <div class="timeline-dot">4</div>
+                        <div class="timeline-label">Package<br>Delivered</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Details -->
+            <div class="details-section">
+                <div class="details-header">
+                    <div class="details-title">Order Information</div>
+                    <div class="order-id">Order #<span id="orderId"><%= orderId %></span></div>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Product:</span>
+                    <span class="details-value" id="productName">Loading...</span>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Buyer Name:</span>
+                    <span class="details-value" id="buyerName">-</span>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Delivery Address:</span>
+                    <span class="details-value" id="deliveryAddress">-</span>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Amount:</span>
+                    <span class="details-value" id="orderAmount">$0</span>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Status:</span>
+                    <span class="details-value" id="orderStatus">Processing</span>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Order Date:</span>
+                    <span class="details-value" id="orderDate">-</span>
+                </div>
+                <div class="details-item">
+                    <span class="details-label">Processing At:</span>
+                    <span class="details-value" id="processingAt">Waiting to process</span>
+                </div>
+                <div class="details-item">
+                    <span class="details-label">Shipped At:</span>
+                    <span class="details-value" id="shippedAt">Waiting to ship</span>
+                </div>
+                <div class="details-item">
+                    <span class="details-label">Delivered At:</span>
+                    <span class="details-value" id="deliveredAt">Waiting for delivery</span>
+                </div>
+                
+                <div class="details-item">
+                    <span class="details-label">Payment Status:</span>
+                    <span class="details-value" style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+                        <span id="paymentStatus">Paid</span>
+                        <span id="paymentNote" class="payment-note"></span>
+                    </span>
+                </div>
+
+                <div class="details-item">
+                    <span class="details-label">Tracking Number:</span>
+                    <span class="details-value" id="trackingNumber">Loading...</span>
+                </div>
+            </div>
+
+            <!-- Tracking History -->
+            <div class="tracking-history">
+                <h3>Tracking History</h3>
+                <div id="trackingList">
+                    <!-- Tracking items will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <div style="flex: 1;">
+                    <button class="button button-primary" id="confirmBtn" onclick="confirmDelivery()" style="display:none; width: 100%;">
+                        Confirm Delivery
+                    </button>
+                    <div id="confirmBtnStatus" style="display:none; margin-top: 10px; padding: 10px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 4px; color: #991b1b; font-size: 14px; text-align: center;">
+                        Waiting for seller to mark as delivered...
+                    </div>
+                </div>
+                <button class="button button-secondary" onclick="goBack()">
+                    Back to Orders
+                </button>
+            </div>
+        <% } %>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let contract;
+        let userAccount;
+        // Convert orderId to number and validate
+        let orderId = <%= orderId %>;
+        if (typeof orderId === 'string') {
+            orderId = parseInt(orderId, 10);
+        }
+        if (!orderId || isNaN(orderId)) {
+            console.error('Invalid orderId:', '<%= orderId %>');
+            orderId = 0;
+        }
+        const contractABI = <%- contractABI %>;
+        const contractData = <%- contractData %>;
+
+        const statusMap = {
+            '0': 'Pending',
+            '1': 'Processing',
+            '2': 'Shipped',
+            '3': 'Delivered',
+            '4': 'Confirmed'
+        };
+
+        async function initWeb3() {
+            try {
+                web3 = new Web3('http://127.0.0.1:7545');
+                const accounts = await web3.eth.getAccounts();
+                userAccount = accounts[0];
+                const networkId = await web3.eth.net.getId();
+                console.log('Detected network ID:', networkId);
+                const deployedNetwork = contractData.networks[networkId];
+                
+                if (deployedNetwork) {
+                    contract = new web3.eth.Contract(contractABI, deployedNetwork.address);
+                    console.log('Contract initialized at address:', deployedNetwork.address);
+                    console.log('Loading order details for orderId:', orderId);
+                    await loadOrderDetails();
+                } else {
+                    console.error('Contract not deployed on network', networkId);
+                    console.error('Available networks:', Object.keys(contractData.networks));
+                }
+            } catch (error) {
+                console.error('Error initializing Web3:', error);
+            }
+        }
+
+        async function loadOrderDetails() {
+            try {
+                console.log('Attempting to fetch order with orderId:', orderId, 'type:', typeof orderId);
+                const order = await contract.methods.getOrder(orderId).call();
+                const tracking = await contract.methods.getTrackingHistory(orderId).call();
+                
+                // Update order details from contract
+                document.getElementById('productName').textContent = order.productName || 'Product';
+                document.getElementById('buyerName').textContent = order.buyerName || '-';
+                document.getElementById('deliveryAddress').textContent = order.deliveryAddress || '-';
+                document.getElementById('orderAmount').textContent = '$' + (order.totalAmount || '0');
+                document.getElementById('orderStatus').textContent = statusMap[order.status];
+                
+                const paymentStatusEl = document.getElementById('paymentStatus');
+                const paymentNoteEl = document.getElementById('paymentNote');
+                if (order.isPaid && !order.isReleased) {
+                    paymentStatusEl.textContent = 'Held in Digital Safe';
+                    paymentStatusEl.className = 'held';
+                    paymentNoteEl.textContent = 'Seller sees payment confirmed but funds stay locked until you confirm delivery.';
+                } else if (order.isPaid && order.isReleased) {
+                    paymentStatusEl.textContent = 'Released to Seller';
+                    paymentStatusEl.className = 'released';
+                    paymentNoteEl.textContent = 'Payment has left the digital safe after your confirmation.';
+                } else {
+                    paymentStatusEl.textContent = 'Unpaid';
+                    paymentStatusEl.className = 'unpaid';
+                    paymentNoteEl.textContent = 'No payment detected for this order yet.';
+                }
+                
+                const orderDate = new Date(Number(order.timestamp) * 1000);
+                document.getElementById('orderDate').textContent = orderDate.toLocaleDateString();
+
+                // Delivered timestamp (when seller marked Delivered)
+                const deliveredAtEl = document.getElementById('deliveredAt');
+                if (order.deliveredAt && Number(order.deliveredAt) > 0) {
+                    const deliveredDate = new Date(Number(order.deliveredAt) * 1000);
+                    deliveredAtEl.textContent = deliveredDate.toLocaleString();
+                } else {
+                    deliveredAtEl.textContent = 'Waiting for delivery';
+                }
+
+                // Processing and Shipped timestamps derived from tracking history
+                let processingAtTs = 0;
+                let shippedAtTs = 0;
+                tracking.forEach(t => {
+                    if (!processingAtTs && t.status === 'Processing') {
+                        processingAtTs = Number(t.timestamp);
+                    }
+                    if (!shippedAtTs && t.status === 'Shipped') {
+                        shippedAtTs = Number(t.timestamp);
+                    }
+                });
+
+                const processingEl = document.getElementById('processingAt');
+                if (processingAtTs > 0) {
+                    processingEl.textContent = new Date(processingAtTs * 1000).toLocaleString();
+                } else {
+                    processingEl.textContent = 'Waiting to process';
+                }
+
+                const shippedEl = document.getElementById('shippedAt');
+                if (shippedAtTs > 0) {
+                    shippedEl.textContent = new Date(shippedAtTs * 1000).toLocaleString();
+                } else {
+                    shippedEl.textContent = 'Waiting to ship';
+                }
+
+                // Update timeline based on status
+                updateTimeline(Number(order.status));
+
+                // Load tracking history
+                loadTrackingHistory(tracking);
+                
+                // Load tracking number from seller contract
+                await loadTrackingNumber();
+                
+                const orderStatus = Number(order.status);
+                
+                // Show confirm button only when seller marks as Delivered (status = 3)
+                const confirmBtn = document.getElementById('confirmBtn');
+                const confirmBtnStatus = document.getElementById('confirmBtnStatus');
+                
+                if (userAccount && userAccount.toLowerCase() === order.buyer.toLowerCase()) {
+                    if (orderStatus === 3) {
+                        // Item marked as delivered - show confirm button
+                        confirmBtn.style.display = 'block';
+                        confirmBtn.disabled = false;
+                        confirmBtn.style.opacity = '1';
+                        confirmBtn.style.cursor = 'pointer';
+                        confirmBtnStatus.style.display = 'none';
+                    } else if (orderStatus >= 4) {
+                        // Already confirmed - hide button
+                        confirmBtn.style.display = 'none';
+                        confirmBtnStatus.style.display = 'none';
+                    } else {
+                        // Waiting for seller to mark as delivered
+                        confirmBtn.style.display = 'none';
+                        confirmBtnStatus.style.display = 'block';
+                    }
+                } else {
+                    confirmBtn.style.display = 'none';
+                    confirmBtnStatus.style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('Error loading order details:', error);
+            }
+        }
+
+        async function loadTrackingNumber() {
+            try {
+                // Make AJAX call to backend to get tracking number
+                const response = await fetch(`/getTrackingNumber?orderId=${orderId}`);
+                const data = await response.json();
+                
+                const trackingNumberEl = document.getElementById('trackingNumber');
+                
+                if (data.trackingNumber && data.trackingNumber.trim() !== '') {
+                    trackingNumberEl.textContent = data.trackingNumber;
+                    trackingNumberEl.style.color = '#2563eb';
+                    trackingNumberEl.style.fontWeight = '600';
+                    console.log('✓ Tracking number loaded:', data.trackingNumber);
+                } else {
+                    trackingNumberEl.textContent = 'Not shipped yet';
+                    trackingNumberEl.style.color = '#999';
+                    console.log('Tracking number not available yet');
+                }
+            } catch (error) {
+                console.error('Error loading tracking number:', error);
+                document.getElementById('trackingNumber').textContent = 'N/A';
+            }
+        }
+
+        function updateTimeline(status) {
+            const steps = [
+                document.getElementById('step2'),
+                document.getElementById('step3'),
+                document.getElementById('step4')
+            ];
+            
+            let progress = 0;
+            
+            if (status >= 1) {
+                steps[0].classList.add('completed');
+                progress = 33;
+            }
+            if (status >= 2) {
+                steps[1].classList.add('completed');
+                progress = 66;
+            }
+            if (status >= 3) {
+                steps[2].classList.add('completed');
+                progress = 100;
+            }
+            
+            // Set active step
+            if (status < 4 && steps[status - 1]) {
+                steps[status - 1].classList.add('active');
+            }
+            
+            document.getElementById('timelineProgress').style.width = progress + '%';
+        }
+
+        function loadTrackingHistory(tracking) {
+            const trackingList = document.getElementById('trackingList');
+            trackingList.innerHTML = '';
+            
+            tracking.reverse().forEach(item => {
+                const trackingDate = new Date(Number(item.timestamp) * 1000);
+                const trackingItem = document.createElement('div');
+                trackingItem.className = 'tracking-item';
+                trackingItem.innerHTML = `
+                    <div class="tracking-status">${item.status}</div>
+                    <div class="tracking-description">${item.description}</div>
+                    <div class="tracking-time">${trackingDate.toLocaleString()}</div>
+                `;
+                trackingList.appendChild(trackingItem);
+            });
+        }
+
+        function goBack() {
+            window.location.href = '/ordertrack?orderId=' + orderId;
+        }
+
+        async function confirmDelivery() {
+            if (!confirm('Confirm that you have received this delivery?')) {
+                return;
+            }
+
+            const confirmBtn = document.getElementById('confirmBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Processing...';
+
+            try {
+                console.log('Calling confirmDelivery for order:', orderId);
+                
+                if (!contract || !userAccount) {
+                    alert('Web3 not initialized. Please refresh the page.');
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Confirm Delivery';
+                    return;
+                }
+
+                // Call the smart contract to confirm delivery
+                const tx = await contract.methods.confirmDelivery(orderId, true)
+                    .send({ from: userAccount, gas: 500000 });
+                
+                console.log('✓ Delivery confirmed! Transaction:', tx);
+                alert('✓ Delivery confirmed! Payment has been released to the seller.');
+                
+                // Reload the page to show updated status
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } catch (error) {
+                console.error('✗ Error confirming delivery:', error);
+                alert('Error confirming delivery: ' + error.message);
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Confirm Delivery';
+            }
+        }
+
+        window.addEventListener('load', initWeb3);
+    </script>
+</body>
+</html>
